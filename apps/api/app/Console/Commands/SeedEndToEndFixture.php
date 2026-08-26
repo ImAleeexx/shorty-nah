@@ -72,6 +72,10 @@ final class SeedEndToEndFixture extends Command
         // The destination is on loopback, which destination validation refuses for
         // good reason. These rows are written directly because the fixture
         // exercises the interstitial, not that validation.
+        //
+        // It points at the sign-in screen rather than the interface root because
+        // the root redirects an unauthenticated viewer, and a destination that
+        // redirects makes "did the browser arrive" unanswerable.
         $this->fixture($domain, $owner, self::INTERSTITIAL_SLUG, 'interstitial');
         $this->fixture($domain, $owner, self::DIRECT_SLUG, null);
 
@@ -98,7 +102,7 @@ final class SeedEndToEndFixture extends Command
             'public_id' => $existing instanceof Link ? $existing->public_id : (string) Str::ulid(),
             'domain_id' => $domain->id,
             'slug' => $slug,
-            'destination' => 'http://localhost:8080/',
+            'destination' => 'http://localhost:8080/sign-in',
             'redirect_mode' => $mode,
             'created_by' => $owner->id,
             'deleted_at' => null,

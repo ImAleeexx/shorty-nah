@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Role;
 use App\Models\User;
 use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Hash;
@@ -140,4 +141,18 @@ it('stores only an argon2id hash, never the password', function (): void {
 
     expect($user->password)->toStartWith('$argon2id$')
         ->and($user->password)->not->toContain(UserFactory::PASSWORD);
+});
+
+it('reports who the session belongs to', function (): void {
+    $user = User::factory()->create(['role' => Role::Member]);
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/auth/user')
+        ->assertOk()
+        ->assertJsonPath('user.id', $user->public_id)
+        ->assertJsonPath('user.role', 'member');
+});
+
+it('refuses to say who the session belongs to without one', function (): void {
+    $this->getJson('/api/v1/auth/user')->assertStatus(401);
 });

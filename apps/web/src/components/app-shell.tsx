@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react';
 
+import { AppNav } from '@/components/app-nav';
+import { CommandPalette } from '@/components/command-palette';
+import { SignOutButton } from '@/components/auth/sign-out-button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Branding } from '@/lib/branding';
+import type { LinkRecord } from '@/lib/links';
 
 /**
  * The frame every signed-in page renders inside.
@@ -11,7 +15,15 @@ import type { Branding } from '@/lib/branding';
  * muscle memory is worth more here than variety. Nothing in this shell animates
  * on navigation — an operator moves between these pages dozens of times a day.
  */
-export function AppShell({ branding, children }: { branding: Branding; children: ReactNode }) {
+export function AppShell({
+  branding,
+  children,
+  links = [],
+}: {
+  branding: Branding;
+  children: ReactNode;
+  links?: LinkRecord[];
+}) {
   return (
     <TooltipProvider>
       <div className="flex min-h-full flex-col">
@@ -30,13 +42,19 @@ export function AppShell({ branding, children }: { branding: Branding; children:
               )}
             </div>
 
-            <ThemeToggle />
+            <div className="flex items-center gap-1">
+              <AppNav />
+              <ThemeToggle />
+              <SignOutButton />
+            </div>
           </div>
         </header>
 
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 md:px-8 md:py-10">
           {children}
         </main>
+
+        <CommandPalette links={links} />
       </div>
     </TooltipProvider>
   );

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Auth\AuthenticationService;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -56,6 +57,26 @@ final class SessionController
         foreach ($this->limiterKeys($request, $credentials['email']) as $key) {
             RateLimiter::clear($key);
         }
+
+        return new JsonResponse([
+            'user' => [
+                'id' => $user->public_id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role->value,
+            ],
+        ]);
+    }
+
+    /**
+     * Who the session belongs to. Every authenticated screen needs this to know
+     * what the viewer may do, and a role is not something the browser should be
+     * asked to remember across a reload.
+     */
+    public function show(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
 
         return new JsonResponse([
             'user' => [
