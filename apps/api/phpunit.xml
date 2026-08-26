@@ -32,5 +32,9 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- ClickHouse-backed tests run against the real service. The dev stack
+             publishes it on this port; credentials come from .env. -->
+        <env name="CLICKHOUSE_HOST" value="127.0.0.1"/>
+        <env name="CLICKHOUSE_PORT" value="8124"/>
     </php>
 </phpunit>

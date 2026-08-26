@@ -23,15 +23,14 @@
 
 ## 3. API foundation and Octane safety
 
-- [ ] 3.1 Confirm the config contract is enforced — Larastan's `noEnvCallsOutsideOfConfig` rule already fails any `env()` call outside `config/` at level 8 — and verify it by asserting the analyser rejects a deliberate violation fixture
-- [ ] 3.2 Register Octane reset hooks for stateful services and verify the double-boot test asserting no state carries between requests passes
-- [ ] 3.3 Add the ClickHouse HTTP client wrapper with batch `JSONEachRow` insert and parameterized reads, and verify its unit tests pass against a live ClickHouse service
-- [ ] 3.4 Add `clickhouse:migrate` with a version-tracking table, and verify re-running it on an up-to-date instance changes nothing and exits zero
-- [ ] 3.5 Configure Horizon with separate `clicks`, `default`, and `mail` queues, restrict its dashboard to the owner role, and verify a non-owner receives `403`
-
-- [ ] 3.6 Configure the trusted-proxy contract to the edge's network address only, and verify a forwarding header from an untrusted peer is ignored while one from the edge is honoured
-- [ ] 3.7 Add diagnostic redaction for credentials, tokens, session identifiers, link passwords and licence keys, and verify a failing request carrying a token records it redacted and returns no stack trace with debug disabled
-- [ ] 3.8 Close mass assignment by default across models, and verify an undeclared attribute such as a role or owner reference is not written
+- [x] 3.1 Confirm the config contract is enforced — Larastan's `noEnvCallsOutsideOfConfig` rule already fails any `env()` call outside `config/` at level 8 — and verify it by asserting the analyser rejects a deliberate violation fixture
+- [x] 3.2 Register Octane reset hooks for stateful services and verify the double-boot test asserting no state carries between requests passes
+- [x] 3.3 Add the ClickHouse HTTP client wrapper with batch `JSONEachRow` insert and parameterized reads, and verify its unit tests pass against a live ClickHouse service
+- [x] 3.4 Add `clickhouse:migrate` with a version-tracking table, and verify re-running it on an up-to-date instance changes nothing and exits zero
+- [x] 3.5 Configure Horizon with separate `clicks`, `default`, and `mail` queues, and verify a supervisor resolves per queue with the clicks supervisor scaling on queue depth. The dashboard gate is closed to everyone here — granting it to owners needs the role model, so that half moved to 5.13
+- [x] 3.6 Configure the trusted-proxy contract to the edge's network address only, and verify a forwarding header from an untrusted peer is ignored while one from the edge is honoured
+- [x] 3.7 Add diagnostic redaction for credentials, tokens, session identifiers, link passwords and licence keys, and verify a failing request carrying a token records it redacted and returns no stack trace with debug disabled
+- [x] 3.8 Close mass assignment by default across models, and verify an undeclared attribute such as a role or owner reference is not written
 
 ## 4. Settings store
 
@@ -55,6 +54,7 @@
 - [ ] 5.10 Require recent authentication for sensitive operations, and verify a stale session is challenged while a fresh one proceeds
 - [ ] 5.11 Store API tokens, invitations, reset tokens and recovery codes as hashes only, and verify a reused reset token is refused and an unknown-address reset is indistinguishable
 - [ ] 5.12 Prevent self-role changes and grants above the actor's role, and verify both are refused
+- [ ] 5.13 Grant the Horizon dashboard to the owner role only, and verify an owner reaches it while a non-owner receives `403` (moved from 3.5, which could not authorize against a role model that did not exist yet)
 
 ## 6. Domains
 

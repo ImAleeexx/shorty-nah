@@ -37,6 +37,9 @@ x-api-env: &api-env
   CLICKHOUSE_READ_USERNAME: ${CLICKHOUSE_READ_USERNAME:?CLICKHOUSE_READ_USERNAME is required}
   CLICKHOUSE_READ_PASSWORD: ${CLICKHOUSE_READ_PASSWORD:?CLICKHOUSE_READ_PASSWORD is required}
   GEOIP_PATH: /geoip
+  # Same variable as the network subnet below: the application must trust
+  # exactly the network the edge sits on, and never a wildcard.
+  TRUSTED_PROXIES: ${INTERNAL_SUBNET:-172.29.0.0/16}
 
 x-api-depends: &api-depends
   postgres:
@@ -200,6 +203,15 @@ services:
       GEOIPUPDATE_FREQUENCY: "72"
     volumes:
       - geoip-data:/usr/share/GeoIP
+
+networks:
+  default:
+    ipam:
+      config:
+        # Pinned so the trusted-proxy list is deterministic rather than
+        # whatever Docker happened to allocate. Override INTERNAL_SUBNET if it
+        # collides with another network on the host.
+        - subnet: ${INTERNAL_SUBNET:-172.29.0.0/16}
 
 volumes:
   postgres-data:

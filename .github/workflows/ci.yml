@@ -16,6 +16,26 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+
+    # The ClickHouse-backed tests run against the real service rather than
+    # skipping, so a regression in the client cannot pass CI unnoticed. Port
+    # 8124 matches .env.example and the dev stack.
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:25.3-alpine@sha256:a4e8cf46e526a06f4f52d22f7fa8d07472b55d3c896d7ca3f159e249be38ae62
+        env:
+          CLICKHOUSE_DB: shortynah_events
+          CLICKHOUSE_USER: shortynah_writer
+          CLICKHOUSE_PASSWORD: ci-writer
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+        ports:
+          - 8124:8123
+        options: >-
+          --health-cmd "wget -qO- http://127.0.0.1:8123/ping | grep -q Ok"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+
     steps:
       - uses: actions/checkout@v5
 
@@ -41,6 +61,32 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+          {
+            echo "CLICKHOUSE_WRITE_USERNAME=shortynah_writer"
+            echo "CLICKHOUSE_WRITE_PASSWORD=ci-writer"
+            echo "CLICKHOUSE_READ_USERNAME=shortynah_reader"
+            echo "CLICKHOUSE_READ_PASSWORD=ci-reader"
+            echo "TRUSTED_PROXIES=172.29.0.0/16"
+          } >> .env
+
+      - name: Create the ClickHouse read-only account
+        run: |
+          curl -sS --fail-with-body \
+            --user "shortynah_writer:ci-writer" \
+            --data-binary "CREATE USER IF NOT EXISTS shortynah_reader IDENTIFIED BY 'ci-reader'" \
+            "http://127.0.0.1:8124/"
+          curl -sS --fail-with-body \
+            --user "shortynah_writer:ci-writer" \
+            --data-binary "GRANT SELECT ON shortynah_events.* TO shortynah_reader" \
+            "http://127.0.0.1:8124/"
+
+      - name: Fail if any ClickHouse test skipped
+        run: |
+          ./vendor/bin/pest --filter=ClickHouse --log-junit /tmp/ch.xml > /dev/null 2>&1 || true
+          if grep -q '<skipped' /tmp/ch.xml; then
+            echo "ClickHouse tests skipped; the service was not reachable." >&2
+            exit 1
+          fi
 
       - name: Formatting
         run: ./vendor/bin/pint --test
