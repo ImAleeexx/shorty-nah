@@ -6,7 +6,7 @@ import { PeopleManager, type Invitation, type Person } from '@/components/people
 import { fetchPublicConfiguration } from '@/lib/api';
 import { sanitiseBranding } from '@/lib/branding';
 import { apiGet } from '@/lib/server-api';
-import { administrates, currentViewer } from '@/lib/session';
+import { administrates, currentViewer, owns } from '@/lib/session';
 
 export const metadata: Metadata = { title: 'People' };
 
@@ -36,7 +36,7 @@ export default async function PeoplePage() {
   ]);
 
   return (
-    <AppShell branding={sanitiseBranding(configuration)}>
+    <AppShell branding={sanitiseBranding(configuration)} owner={owns(viewer)}>
       <PeopleManager
         viewer={viewer}
         people={users.ok ? users.data.users : []}

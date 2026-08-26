@@ -37,8 +37,17 @@ if ! grep -q 'clickhouse:migrate' docker/api/entrypoint.sh; then
     violations=$((violations + 1))
 fi
 
-if ! grep -q 'migrate --force' docker/api/entrypoint.sh; then
+# Matched on the guarantee rather than the exact flags: the connection it runs
+# as is a separate concern, checked below.
+if ! grep -qE 'artisan migrate .*--force' docker/api/entrypoint.sh; then
     printf 'the schema step does not apply the application schema\n' >&2
+    violations=$((violations + 1))
+fi
+
+# Migrations run as the owning role. The application's role holds no UPDATE or
+# DELETE on the audit table, which includes not being able to create it.
+if ! grep -q 'database=pgsql_owner' docker/api/entrypoint.sh; then
+    printf 'the schema step does not apply migrations as the owning role\n' >&2
     violations=$((violations + 1))
 fi
 

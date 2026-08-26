@@ -24,6 +24,10 @@ export function administrates(viewer: Viewer | null): boolean {
   return viewer !== null && (viewer.role === 'owner' || viewer.role === 'admin');
 }
 
+export function owns(viewer: Viewer | null): boolean {
+  return viewer !== null && viewer.role === 'owner';
+}
+
 export function mayWrite(viewer: Viewer | null): boolean {
   return viewer !== null && viewer.role !== 'viewer';
 }

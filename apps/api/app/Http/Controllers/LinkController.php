@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Links\LinkException;
 use App\Links\LinkService;
 use App\Links\SlugExhaustedException;
@@ -129,7 +131,7 @@ final class LinkController
         return new JsonResponse(['link' => $this->present($link, $links)], 201);
     }
 
-    public function update(Request $request, string $publicId, LinkService $links): JsonResponse
+    public function update(Request $request, string $publicId, LinkService $links, AuditLog $audit): JsonResponse
     {
         $actor = $this->actor($request);
         $link = $this->findVisible($request, $publicId);
@@ -159,6 +161,19 @@ final class LinkController
             $link = $links->update($link, $input);
         } catch (LinkException $e) {
             throw ValidationException::withMessages(['destination' => $e->getMessage()]);
+        }
+
+        // Only that it changed, never to what. A link password is a credential,
+        // and the audit trail is not an exception to that.
+        if (array_key_exists('password', $input)) {
+            $audit->record(
+                AuditAction::LinkPasswordChanged,
+                actor: $request->user(),
+                targetType: 'link',
+                targetId: $link->public_id,
+                context: ['protected' => $input['password'] !== null && $input['password'] !== ''],
+                request: $request,
+            );
         }
 
         return new JsonResponse(['link' => $this->present($link, $links)]);

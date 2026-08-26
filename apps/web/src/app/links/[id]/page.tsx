@@ -15,7 +15,7 @@ import type { EventPage, Report } from '@/lib/analytics';
 import { fetchPublicConfiguration } from '@/lib/api';
 import { sanitiseBranding } from '@/lib/branding';
 import { apiGet } from '@/lib/server-api';
-import { currentViewer } from '@/lib/session';
+import { currentViewer, owns } from '@/lib/session';
 
 export const metadata: Metadata = { title: 'Link' };
 
@@ -32,7 +32,9 @@ export default async function LinkReportPage({ params }: { params: Promise<{ id:
     redirect('/setup');
   }
 
-  if ((await currentViewer()) === null) {
+  const viewer = await currentViewer();
+
+  if (viewer === null) {
     redirect('/sign-in');
   }
 
@@ -49,7 +51,7 @@ export default async function LinkReportPage({ params }: { params: Promise<{ id:
   const { link, period, totals, series, countries, referrers, clients } = report.data;
 
   return (
-    <AppShell branding={sanitiseBranding(configuration)}>
+    <AppShell branding={sanitiseBranding(configuration)} owner={owns(viewer)}>
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <Link href="/links" className="text-ink-muted hover:text-ink text-xs">

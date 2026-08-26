@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Domains\DomainException;
 use App\Domains\DomainService;
 use App\Domains\DomainVerifier;
@@ -27,7 +29,7 @@ final class DomainController
         ]);
     }
 
-    public function store(Request $request, DomainService $domains): JsonResponse
+    public function store(Request $request, DomainService $domains, AuditLog $audit): JsonResponse
     {
         if (! $this->administrates($request)) {
             return new JsonResponse(status: 404);
@@ -44,6 +46,15 @@ final class DomainController
         } catch (DomainException $e) {
             throw ValidationException::withMessages(['host' => $e->getMessage()]);
         }
+
+        $audit->record(
+            AuditAction::DomainAdded,
+            actor: $actor,
+            targetType: 'domain',
+            targetId: $domain->public_id,
+            context: ['host' => $domain->host],
+            request: $request,
+        );
 
         return new JsonResponse([
             'domain' => $this->present($domain, $domains),
@@ -82,7 +93,7 @@ final class DomainController
         return new JsonResponse(['domain' => $this->present($domain->refresh(), $domains)]);
     }
 
-    public function destroy(Request $request, Domain $domain, DomainService $domains): JsonResponse
+    public function destroy(Request $request, Domain $domain, DomainService $domains, AuditLog $audit): JsonResponse
     {
         if (! $this->administrates($request)) {
             return new JsonResponse(status: 404);
@@ -90,11 +101,26 @@ final class DomainController
 
         $confirmed = $request->boolean('confirm_link_deletion');
 
+        $host = $domain->host;
+        $publicId = $domain->public_id;
+
         try {
             $domains->delete($domain, $confirmed);
         } catch (DomainException $e) {
             throw ValidationException::withMessages(['domain' => $e->getMessage()])->status(422);
         }
+
+        /** @var User $actor */
+        $actor = $request->user();
+
+        $audit->record(
+            AuditAction::DomainRemoved,
+            actor: $actor,
+            targetType: 'domain',
+            targetId: $publicId,
+            context: ['host' => $host],
+            request: $request,
+        );
 
         return new JsonResponse(status: 204);
     }

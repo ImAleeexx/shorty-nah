@@ -19,10 +19,12 @@ export function AppShell({
   branding,
   children,
   links = [],
+  owner = false,
 }: {
   branding: Branding;
   children: ReactNode;
   links?: LinkRecord[];
+  owner?: boolean;
 }) {
   return (
     <TooltipProvider>
@@ -43,7 +45,7 @@ export function AppShell({
             </div>
 
             <div className="flex items-center gap-1">
-              <AppNav />
+              <AppNav owner={owner} />
               <ThemeToggle />
               <SignOutButton />
             </div>

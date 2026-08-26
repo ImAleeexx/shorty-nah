@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Analytics\AnalyticsReader;
+use App\Audit\AuditLog;
 use App\Branding\BrandingAssetStore;
 use App\Clicks\ClickQueue;
 use App\Clicks\ClickToken;
@@ -88,6 +89,12 @@ class AppServiceProvider extends ServiceProvider
             settings: $app->make(SettingsStore::class),
             files: $app->make(Filesystem::class),
             path: ConfigValue::string(config('shortynah.setup_token_path'), 'SETUP_TOKEN_PATH'),
+        ));
+
+        // Holds a key and nothing request-scoped, so a singleton is safe under a
+        // reused worker.
+        $this->app->singleton(AuditLog::class, fn (Application $app): AuditLog => new AuditLog(
+            applicationKey: ConfigValue::string(config('app.key'), 'APP_KEY'),
         ));
 
         $this->app->singleton(SettingsStore::class, fn (Application $app): SettingsStore => new SettingsStore(

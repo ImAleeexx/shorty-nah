@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Auth\SessionInvalidator;
 use App\Models\User;
 use App\Rules\StrongPassword;
@@ -14,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 final class PasswordController
 {
-    public function update(Request $request): JsonResponse
+    public function update(Request $request, AuditLog $audit): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -39,6 +41,8 @@ final class PasswordController
 
         // The acting session stays usable; every other one does not.
         SessionInvalidator::forgetOtherSessions($input['password']);
+
+        $audit->record(AuditAction::PasswordChanged, actor: $user, request: $request);
 
         return new JsonResponse(status: 204);
     }

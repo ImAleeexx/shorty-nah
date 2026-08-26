@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,7 +50,7 @@ final class ApiTokenController
         return new JsonResponse(['tokens' => $tokens]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, AuditLog $audit): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -66,6 +68,17 @@ final class ApiTokenController
 
         $token = $user->createToken($input['name'], $input['abilities'], $expiresAt);
 
+        // The plaintext token is shown to the caller once and recorded nowhere,
+        // audit entry included.
+        $audit->record(
+            AuditAction::TokenCreated,
+            actor: $user,
+            targetType: 'token',
+            targetId: (string) $token->accessToken->getKey(),
+            context: ['name' => $input['name'], 'abilities' => implode(',', $input['abilities'])],
+            request: $request,
+        );
+
         return new JsonResponse([
             'id' => $token->accessToken->getKey(),
             'name' => $input['name'],
@@ -76,12 +89,22 @@ final class ApiTokenController
         ], 201);
     }
 
-    public function destroy(Request $request, string $token): JsonResponse
+    public function destroy(Request $request, string $token, AuditLog $audit): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
 
         $deleted = $user->tokens()->where('id', $token)->delete();
+
+        if ($deleted > 0) {
+            $audit->record(
+                AuditAction::TokenRevoked,
+                actor: $user,
+                targetType: 'token',
+                targetId: $token,
+                request: $request,
+            );
+        }
 
         // A token belonging to someone else is indistinguishable from one that
         // never existed.
