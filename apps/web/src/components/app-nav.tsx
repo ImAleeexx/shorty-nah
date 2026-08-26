@@ -8,6 +8,8 @@ import { cn } from '@/lib/cn';
 const DESTINATIONS = [
   { href: '/', label: 'Overview' },
   { href: '/links', label: 'Links' },
+  { href: '/people', label: 'People' },
+  { href: '/settings', label: 'Settings' },
 ] as const;
 
 /**

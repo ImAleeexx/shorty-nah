@@ -13,6 +13,7 @@ use App\Http\Controllers\DomainController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\PublicConfigurationController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\TlsAuthorizationController;
 use App\Http\Controllers\UserController;
@@ -85,6 +86,12 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/links/{link}/export', [AnalyticsController::class, 'export'])->name('links.export');
 
         Route::get('/branding', [BrandingController::class, 'show'])->name('branding.show');
+
+        // Not behind recent authentication: the security contract enumerates the
+        // operations that require it — email, password, second factor, API token
+        // and domain deletion — and instance configuration is not one of them.
+        Route::get('/settings', [SettingsController::class, 'show'])->name('settings.show');
+        Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
         Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
 

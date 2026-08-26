@@ -69,6 +69,16 @@ final class SettingsRegistry
     }
 
     /**
+     * Settings an administrator may change through the settings endpoint.
+     *
+     * @return array<string, Setting>
+     */
+    public static function writable(): array
+    {
+        return array_filter(self::all(), static fn (Setting $s): bool => $s->writable);
+    }
+
+    /**
      * Only for tests that need to observe a schema change.
      */
     public static function flush(): void
@@ -99,8 +109,9 @@ final class SettingsRegistry
                 'closed',
                 exposed: true,
                 allowed: ['closed', 'invite', 'open'],
+                writable: true,
             ),
-            new Setting('security.two_factor_required', SettingType::Boolean, false),
+            new Setting('security.two_factor_required', SettingType::Boolean, false, writable: true),
 
             // --- Branding. Exposed because the interface renders it before
             // anyone signs in, and a late arrival means an unbranded first paint.
@@ -121,26 +132,27 @@ final class SettingsRegistry
                 SettingType::String,
                 'direct',
                 allowed: ['direct', 'interstitial'],
+                writable: true,
             ),
-            new Setting('redirect.interstitial_delay_ms', SettingType::Integer, 1200),
+            new Setting('redirect.interstitial_delay_ms', SettingType::Integer, 1200, writable: true),
 
             // --- Links ---
             new Setting('slug.length', SettingType::Integer, 7),
             new Setting('link.destination_blocklist', SettingType::String),
 
             // --- Analytics. Operational knobs, deliberately not exposed. ---
-            new Setting('analytics.retention_days', SettingType::Integer, 365),
-            new Setting('analytics.bot_filtering', SettingType::Boolean, true),
-            new Setting('analytics.timezone', SettingType::String, 'UTC'),
-            new Setting('geo.maxmind_account_id', SettingType::String, null, sensitive: true),
-            new Setting('geo.maxmind_license_key', SettingType::String, null, sensitive: true),
+            new Setting('analytics.retention_days', SettingType::Integer, 365, writable: true),
+            new Setting('analytics.bot_filtering', SettingType::Boolean, true, writable: true),
+            new Setting('analytics.timezone', SettingType::String, 'UTC', writable: true),
+            new Setting('geo.maxmind_account_id', SettingType::String, null, sensitive: true, writable: true),
+            new Setting('geo.maxmind_license_key', SettingType::String, null, sensitive: true, writable: true),
 
             // --- Outbound mail ---
-            new Setting('mail.host', SettingType::String),
-            new Setting('mail.port', SettingType::Integer, 587),
-            new Setting('mail.username', SettingType::String),
-            new Setting('mail.password', SettingType::String, null, sensitive: true),
-            new Setting('mail.from_address', SettingType::String),
+            new Setting('mail.host', SettingType::String, writable: true),
+            new Setting('mail.port', SettingType::Integer, 587, writable: true),
+            new Setting('mail.username', SettingType::String, writable: true),
+            new Setting('mail.password', SettingType::String, null, sensitive: true, writable: true),
+            new Setting('mail.from_address', SettingType::String, writable: true),
         ];
     }
 }

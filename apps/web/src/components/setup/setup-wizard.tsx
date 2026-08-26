@@ -350,11 +350,7 @@ export function SetupWizard({ instanceName }: { instanceName: string }) {
 function Heading({ children }: { children: React.ReactNode }) {
   // The editorial serif is reserved for setup and empty states; this is one of
   // the two places it is allowed to carry a page.
-  return (
-    <h1 className="text-ink font-(family-name:--font-editorial) text-3xl tracking-tight">
-      {children}
-    </h1>
-  );
+  return <h1 className="text-ink font-serif text-3xl tracking-tight">{children}</h1>;
 }
 
 function Progress({
