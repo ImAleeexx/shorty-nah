@@ -80,15 +80,15 @@
 
 ## 8. Redirect hot path
 
-- [ ] 8.1 Register the redirect route ahead of the standard middleware stack and verify a request bypasses session and CSRF middleware
-- [ ] 8.2 Implement Redis-only resolution with self-contained cache entries, and verify a cache hit issues zero application database queries
-- [ ] 8.3 Implement negative caching for unknown slugs and verify repeated requests for a non-existent slug issue no database query after the first
-- [ ] 8.4 Implement single-flight locking on cold resolution and verify concurrent requests for one uncached slug produce a single database query
-- [ ] 8.5 Implement direct mode returning `302` with no tracking markup and no-store cache headers, and verify the response-shape test passes
-- [ ] 8.6 Implement constraint evaluation for expired, disabled, and limit-reached links, and verify unauthenticated responses for disabled and never-existed slugs are indistinguishable
-- [ ] 8.7 Implement the Redis click counter with a reconciliation job against the event store, and verify a limited link stops resolving
-- [ ] 8.8 Implement the password gate that reveals nothing before success, with attempt rate limiting, and verify no response header or body leaks the destination
-- [ ] 8.9 Implement per-source redirect rate limiting recording no clicks for refused requests, and verify the `429` test passes
+- [x] 8.1 Register the redirect route ahead of the standard middleware stack and verify a request bypasses session and CSRF middleware
+- [x] 8.2 Implement Redis-only resolution with self-contained cache entries, and verify a cache hit issues zero application database queries
+- [x] 8.3 Implement negative caching for unknown slugs and verify repeated requests for a non-existent slug issue no database query after the first
+- [x] 8.4 Implement single-flight locking on cold resolution and verify concurrent requests for one uncached slug produce a single database query
+- [x] 8.5 Implement direct mode returning `302` with no tracking markup and no-store cache headers, and verify the response-shape test passes
+- [x] 8.6 Implement constraint evaluation for expired, disabled, and limit-reached links, and verify unauthenticated responses for disabled and never-existed slugs are indistinguishable
+- [x] 8.7 Implement the Redis click counter with a reconciliation job, and verify a limited link stops resolving and stays closed after the counter is lost — the cache entry carries the persisted count as a floor. Reconciliation currently persists the counter into Postgres; sourcing it from the event store arrives with the pipeline in 11.7
+- [x] 8.8 Implement the password gate that reveals nothing before success, with attempt rate limiting, and verify no response header or body leaks the destination
+- [x] 8.9 Implement per-source redirect rate limiting recording no clicks for refused requests, and verify the `429` test passes
 
 ## 9. Interstitial mode
 
@@ -119,6 +119,7 @@
 - [ ] 11.4 Implement paginated raw-event drill-down for a link and verify the endpoint tests pass
 - [ ] 11.5 Implement click-event export excluding network addresses and verify the exported file contains the period's events and no address column
 - [ ] 11.6 Verify unique counts are reported per period and never summed across periods
+- [ ] 11.7 Reconcile the Redis click counters against the event store rather than against the persisted count, and verify a counter drifting from recorded events converges to the event total
 
 ## 12. Web foundation, design system, and branding
 

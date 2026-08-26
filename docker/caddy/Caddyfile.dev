@@ -24,14 +24,29 @@
 :80 {
 	import hardening
 
-	# Bare paths are listed alongside their subtrees: a /horizon/* matcher
-	# alone does not match /horizon itself.
-	@api path /api/* /sanctum/* /horizon /horizon/* /storage /storage/* /up
-	handle @api {
-		reverse_proxy api:8000
+	# Production gives each host its own site block; locally everything arrives on
+	# one port, so the split is by Host instead. Without it a short domain's slug
+	# would be served by the web app and no redirect could ever be exercised
+	# locally.
+	# APP_DOMAIN is the interface host; 127.0.0.1 is added so a request without a
+	# Host override still reaches it. Caddy refuses a repeated value, so the
+	# literal localhost is not listed — APP_DOMAIN already supplies it in dev.
+	@interface host {$APP_DOMAIN} 127.0.0.1
+
+	handle @interface {
+		@api path /api/* /sanctum/* /horizon /horizon/* /storage /storage/* /up
+		handle @api {
+			reverse_proxy api:8000
+		}
+
+		handle {
+			reverse_proxy web:3000
+		}
 	}
 
+	# Any other Host is a short domain: every path belongs to the redirect
+	# path, exactly as the production :443 block does.
 	handle {
-		reverse_proxy web:3000
+		reverse_proxy api:8000
 	}
 }

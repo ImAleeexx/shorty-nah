@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -66,5 +67,16 @@ class AppServiceProvider extends ServiceProvider
         // enumerate which domains an instance serves.
         RateLimiter::for('tls-authorize', static fn (Request $request): Limit => Limit::perMinute(60)
             ->by((string) $request->ip()));
+
+        // Generous enough that a real audience clicking a shared link is never
+        // refused, tight enough that walking the slug space is not free. Keyed on
+        // the address the trusted-proxy contract produced, never on a header a
+        // client controls.
+        RateLimiter::for('redirect', static fn (Request $request): Limit => Limit::perMinute(240)
+            ->by((string) $request->ip())
+            ->response(static fn (): Response => new Response('Too many requests', 429, [
+                'Cache-Control' => 'no-store',
+                'Retry-After' => '60',
+            ])));
     }
 }
