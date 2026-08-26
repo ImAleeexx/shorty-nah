@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Clicks;
 
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
+use Illuminate\Support\Facades\Log;
 use JsonException;
+use Throwable;
 
 /**
  * A Redis list, not a Laravel queue.
@@ -32,9 +34,18 @@ final class RedisClickQueue implements ClickQueue
             return;
         }
 
-        // Variadic, not an array. phpredis pushes an array argument as a single
-        // serialised element, which makes every value unreadable on the way out.
-        $this->redis->connection()->rpush(self::KEY, $payload);
+        try {
+            // Variadic, not an array. phpredis pushes an array argument as a
+            // single serialised element, which makes every value unreadable on
+            // the way out.
+            $this->redis->connection()->rpush(self::KEY, $payload);
+        } catch (Throwable $e) {
+            // Recording a click must never break the redirect that produced it.
+            // An unreachable queue costs one click; a failed redirect costs the
+            // visitor. The failure is reported through logging rather than
+            // returned, because by this point there is nobody left to answer.
+            Log::warning('Could not enqueue a click envelope.', ['reason' => $e->getMessage()]);
+        }
     }
 
     /**
@@ -42,7 +53,14 @@ final class RedisClickQueue implements ClickQueue
      */
     public function drain(int $max): array
     {
-        $connection = $this->redis->connection();
+        try {
+            $connection = $this->redis->connection();
+        } catch (Throwable $e) {
+            Log::warning('Could not reach the click queue to drain it.', ['reason' => $e->getMessage()]);
+
+            return [];
+        }
+
         $envelopes = [];
 
         for ($i = 0; $i < $max; $i++) {
@@ -68,13 +86,21 @@ final class RedisClickQueue implements ClickQueue
 
     public function size(): int
     {
-        $length = $this->redis->connection()->llen(self::KEY);
+        try {
+            $length = $this->redis->connection()->llen(self::KEY);
+        } catch (Throwable) {
+            return 0;
+        }
 
         return is_numeric($length) ? (int) $length : 0;
     }
 
     public function clear(): void
     {
-        $this->redis->connection()->del(self::KEY);
+        try {
+            $this->redis->connection()->del(self::KEY);
+        } catch (Throwable) {
+            // Nothing to clear if it cannot be reached.
+        }
     }
 }

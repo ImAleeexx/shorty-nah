@@ -69,10 +69,29 @@ feeds Laravel when it runs on the host (tests, artisan). Inside containers the
 Compose environment wins. Host-run tests need credentials in `apps/api/.env`, and
 they are not interchangeable.
 
-**Host-run tests reach the dev stack's published ports**, set in `phpunit.xml`:
-ClickHouse on `8124`, Redis on `6380`. `make up` must be running or those tests
-skip. Redis is used for the click queue (a list, not a cache entry), so
-`CACHE_STORE=array` in tests does not cover it.
+**Test environment invariants live in `tests/bootstrap.php`, not `phpunit.xml`.**
+PHPUnit's `<env>` writes `putenv()` and `$_ENV` only; Laravel's `env()` reads
+`$_SERVER` first, and under the CLI SAPI the Compose environment lands there. So
+inside the container every `<env>` value lost to `DB_CONNECTION=pgsql` and
+`CACHE_STORE=redis` — `force="true"` included, since force only governs the
+layers PHPUnit owns. The suite pointed `RefreshDatabase` at the development
+Postgres and emptied it. The bootstrap sets all three layers, and
+`TestEnvironmentGuardTest` asserts the result so a regression fails a test
+instead of destroying data. Anything environment-specific must stay out of it.
+
+**Service endpoints follow the environment**, deliberately unforced: `apps/api/.env`
+on the host (ClickHouse `8124`, Redis `6380` — the dev stack's published ports),
+the Compose environment inside the container. `make up` must be running or those
+tests skip. Redis backs the click queue as a list, not a cache entry, so
+`CACHE_STORE=array` does not cover it.
+
+**The container keeps its own PHPStan cache** (`api-phpstan-cache`). The cache
+stores absolute paths and a resolved DI container, so sharing
+`storage/framework/cache/phpstan` through the bind mount made host and container
+runs corrupt each other — a `rename()` into a directory the other side had just
+replaced, reported as a crashed parallel worker rather than as a cache problem.
+Host PHPStan also needs `--memory-limit=1G`; the container's `php.ini` already
+allows it.
 
 **The dev web container has its own `node_modules` volume.** Installing a package
 on the host does not put it in the container — restart `web` and wait for its

@@ -28,6 +28,8 @@ describe('Button', () => {
     const className = container.firstElementChild?.className ?? '';
 
     expect(className).toContain('transition-[transform,background-color,border-color,color]');
+    /* eslint-disable-next-line no-restricted-syntax -- the assertion that keeps
+       transition-all out of the components has to name it to look for it. */
     expect(className).not.toContain('transition-all');
   });
 

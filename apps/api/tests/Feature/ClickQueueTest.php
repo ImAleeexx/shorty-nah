@@ -218,3 +218,40 @@ it('returns nothing from an empty Redis queue', function (): void {
     expect($queue->drain(100))->toBe([])
         ->and($queue->size())->toBe(0);
 });
+
+it('redirects successfully while the click queue is unreachable', function (): void {
+    $domain = queueHost();
+    Link::factory()->forDomain($domain)->withSlug('noqueue1')->create([
+        'destination' => 'https://example.org/still-works',
+    ]);
+
+    // The real Redis-backed queue, pointed at a dead port. Recording a click must
+    // never break the redirect that produced it: an unreachable queue costs one
+    // click, a failed redirect costs the visitor.
+    config()->set('database.redis.default.host', '127.0.0.1');
+    config()->set('database.redis.default.port', 1);
+    app()->forgetInstance('redis');
+    app()->forgetInstance(ClickQueue::class);
+    app()->bind(ClickQueue::class, RedisClickQueue::class);
+
+    $started = microtime(true);
+
+    request_slug($domain->host, 'noqueue1')
+        ->assertStatus(302)
+        ->assertHeader('Location', 'https://example.org/still-works');
+
+    expect(microtime(true) - $started)->toBeLessThan(2.0);
+});
+
+it('serves an interstitial while the click queue is unreachable', function (): void {
+    $domain = queueHost();
+    Link::factory()->forDomain($domain)->withSlug('noqueue2')->interstitial()->create();
+
+    config()->set('database.redis.default.host', '127.0.0.1');
+    config()->set('database.redis.default.port', 1);
+    app()->forgetInstance('redis');
+    app()->forgetInstance(ClickQueue::class);
+    app()->bind(ClickQueue::class, RedisClickQueue::class);
+
+    request_slug($domain->host, 'noqueue2')->assertOk();
+});
