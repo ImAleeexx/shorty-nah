@@ -9,7 +9,7 @@
 ## 2. Container topology
 
 - [x] 2.1 Write the API image (PHP 8.4, FrankenPHP, required extensions, non-root user, no baked secrets) and verify `docker build` succeeds and the image runs `php -v`
-- [ ] 2.2 Write the web image as a Next.js standalone build and verify the container serves the default page
+- [x] 2.2 Write the web image as a Next.js standalone build and verify the container serves the default page (re-verified after the phase 12 dependency set landed: builds, serves 200 as uid 10002, and falls back to default branding when the API is unreachable)
 - [x] 2.3 Write `compose.yaml` with edge, api, worker, scheduler, web, postgres, redis, clickhouse, and geoipupdate, and verify `docker compose config` validates
 - [x] 2.4 Write `compose.dev.yaml` with source mounts and file watching, and verify an edit to an API file is reflected without a rebuild (FrankenPHP does not honour `--max-requests` for worker recycling, so dev uses a `development` image stage carrying Node and chokidar for Octane's `--watch`)
 - [x] 2.5 Write the Caddyfile routing `/api/*` and reserved paths to the API, all else to web, and short domains entirely to the API, and verify each route class reaches the right upstream

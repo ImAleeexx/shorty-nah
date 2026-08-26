@@ -4,12 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-The repository is **empty** — no commits, no code. Everything below describes the *target* architecture
-agreed with the project owner, not files that exist. Until the scaffold lands, treat this as the spec:
-build toward it, and update this file when a decision changes.
+Phases 1–12 of `openspec/changes/bootstrap-url-shortener` are implemented and
+committed on `feat/bootstrap-foundation`: **106 of 157 tasks**. The stack runs, a
+link redirects, clicks land in ClickHouse enriched, and reports answer from
+rollups.
 
-Build sequencing is **OpenSpec-first**: write an OpenSpec change (`openspec-propose`) and get it approved
-before writing code. Do not scaffold ahead of an approved change.
+Phase 13 (setup experience) is next. Nothing in phases 13–19 has been started.
+
+Read `tasks.md` for what is done and what is not — several tasks carry a note
+explaining what was verified and what was deliberately deferred, and those notes
+are the record. `docs/HANDOFF.md` holds the session-level context behind them.
+
+Work is OpenSpec-first: the spec and design are the contract, and a task's
+verification method is part of the task. When implementation contradicts the plan,
+update the artifact and say so rather than quietly diverging — several tasks have
+been reworded for exactly that reason.
 
 ## Product
 
@@ -50,6 +59,42 @@ Makefile             Task entrypoint for everything below
 `docs/` is deliberately git-ignored per owner instruction: internal development docs stay local, and
 `CLAUDE.md` is the only agent-facing doc that ships. `openspec/` *is* committed — it is project history,
 not scratch notes.
+
+## Working environment
+
+Facts that cost time to rediscover.
+
+**Two `.env` files, on purpose.** The root one feeds Docker Compose; `apps/api/.env`
+feeds Laravel when it runs on the host (tests, artisan). Inside containers the
+Compose environment wins. Host-run tests need credentials in `apps/api/.env`, and
+they are not interchangeable.
+
+**Host-run tests reach the dev stack's published ports**, set in `phpunit.xml`:
+ClickHouse on `8124`, Redis on `6380`. `make up` must be running or those tests
+skip. Redis is used for the click queue (a list, not a cache entry), so
+`CACHE_STORE=array` in tests does not cover it.
+
+**The dev web container has its own `node_modules` volume.** Installing a package
+on the host does not put it in the container — restart `web` and wait for its
+install, or the app 500s on a missing module.
+
+**A PHP compile error produces no test output at all.** Pest's reporter swallows
+it: no failure, no error, no JUnit file, exit 1. Run `./scripts/lint-php-syntax.sh`
+first — PHPStan's parser accepts constructs PHP itself rejects.
+
+**Pest helper functions share one global scope.** A `function foo()` in one test
+file collides with another file's, and with Pest's and Laravel's own helpers
+(`test`, `visit`, `validator`, `record` are all taken). Name them distinctively.
+
+**Short domains need a dotted host.** Hostname validation requires a dot, so
+`localhost` is refused. Use `go.localhost` — browsers resolve `*.localhost` to
+loopback, which is how the browser suite reaches the redirect path. The dev
+Caddyfile splits on `Host`: `APP_DOMAIN` and `127.0.0.1` reach the interface,
+anything else is treated as a short domain.
+
+**Destination validation refuses loopback**, so a fixture pointing at
+`http://localhost:8080/` must be written with `forceFill`, not through
+`LinkService`. `make e2e-fixture` does this.
 
 ## Commands
 
@@ -94,6 +139,19 @@ pnpm test                       # Vitest
 pnpm test -- src/lib/slug.test.ts
 pnpm test:e2e                   # Playwright
 ```
+
+## Services
+
+| Service | Role |
+|---|---|
+| `edge` | Caddy: TLS, routing, on-demand certs gated by the API |
+| `api` | Octane/FrankenPHP — HTTP, including the redirect hot path |
+| `worker` | Horizon: `clicks`, `default`, `mail` queues |
+| `clicks` | The click drain daemon — batches envelopes into ClickHouse |
+| `scheduler` | `schedule:work` |
+| `web` | Next.js |
+| `postgres` / `redis` / `clickhouse` | Datastores, none published to the host |
+| `geoipupdate` | MaxMind sidecar; exits cleanly with no licence key |
 
 ## Architecture
 
