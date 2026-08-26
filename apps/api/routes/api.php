@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\RegistrationController;
@@ -52,6 +53,10 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/links', [LinkController::class, 'store'])->name('links.store');
         Route::patch('/links/{link}', [LinkController::class, 'update'])->name('links.update');
         Route::delete('/links/{link}', [LinkController::class, 'destroy'])->name('links.destroy');
+
+        Route::get('/links/{link}/report', [AnalyticsController::class, 'report'])->name('links.report');
+        Route::get('/links/{link}/events', [AnalyticsController::class, 'events'])->name('links.events');
+        Route::get('/links/{link}/export', [AnalyticsController::class, 'export'])->name('links.export');
 
         Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
 

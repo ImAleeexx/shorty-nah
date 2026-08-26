@@ -20,3 +20,7 @@ Schedule::command('shortynah:drain-clicks --batch=1000 --passes=5')->everyMinute
 // Rotating the visitor salt is what makes an identifier non-recomputable
 // afterwards. Discarding the previous salt is the whole mechanism.
 Schedule::call(fn () => app(VisitorHash::class)->rotate())->daily();
+
+// Keeps the TTL in step with the configured retention. A setting change takes
+// effect without anyone running DDL by hand.
+Schedule::command('shortynah:apply-retention')->dailyAt('03:10')->withoutOverlapping();
