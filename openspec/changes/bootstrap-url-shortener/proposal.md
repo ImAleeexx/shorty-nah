@@ -8,7 +8,7 @@ data; existing self-hosted ones generally trade away either analytics depth or d
 
 ## What Changes
 
-- Establish a two-application monorepo: a Laravel 12 API on Octane/FrankenPHP and a Next.js 15 web
+- Establish a two-application monorepo: a Laravel 13 API on Octane/FrankenPHP and a Next.js 16 web
   client, orchestrated by Docker Compose behind a Caddy edge.
 - Introduce link management: creation, editing, CSPRNG slugs, custom slugs with a reserved-word
   blocklist, expiry, password protection, and click limits.

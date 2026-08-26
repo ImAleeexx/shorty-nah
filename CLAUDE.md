@@ -26,8 +26,8 @@ regress: it is the only route allowed to skip the normal middleware stack.
 
 ## Stack
 
-- **API** — Laravel 12, PHP 8.4, Octane on **FrankenPHP** worker mode
-- **Web** — Next.js 15 App Router, React 19, TypeScript strict, Tailwind v4, pnpm
+- **API** — Laravel 13, PHP 8.4, Octane on **FrankenPHP** worker mode
+- **Web** — Next.js 16 App Router, React 19, TypeScript strict, Tailwind v4, pnpm
 - **App data** — Postgres 17
 - **Click events** — ClickHouse (high-write events + rollups)
 - **Cache / queues / sessions** — Redis, queues driven by Laravel Horizon

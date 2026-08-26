@@ -1,10 +1,10 @@
 ## 1. Repository and toolchain
 
-- [ ] 1.1 Create the monorepo skeleton (`apps/api`, `apps/web`, `docker/`, root `Makefile`, `.env.example`) and verify `make help` lists every documented target
-- [ ] 1.2 Install Laravel 12 into `apps/api` with Octane and FrankenPHP, and verify `php artisan octane:status` reports the FrankenPHP server
-- [ ] 1.3 Install Next.js 15 with TypeScript strict and Tailwind v4 into `apps/web`, and verify `pnpm build` and `pnpm typecheck` both pass
-- [ ] 1.4 Configure Pint, Larastan level 8, ESLint, and Prettier, and verify each runs clean on the untouched scaffolds
-- [ ] 1.5 Add the CI workflow running API and web quality gates plus tests, and verify it passes on the scaffold commit
+- [x] 1.1 Create the monorepo skeleton (`apps/api`, `apps/web`, `docker/`, root `Makefile`, `.env.example`) and verify `make help` lists every documented target
+- [x] 1.2 Install Laravel 13 into `apps/api` with Octane and FrankenPHP, and verify Octane boots on FrankenPHP and serves a request (`octane:status` only reports running state, not the server, so booting it is the real check)
+- [x] 1.3 Install Next.js 16 with TypeScript strict and Tailwind v4 into `apps/web`, and verify `pnpm build` and `pnpm typecheck` both pass
+- [x] 1.4 Configure the quality and test toolchain — Pint, Larastan level 8, Pest on the API; ESLint, Prettier, Vitest, Playwright on the web — and verify every gate runs clean on the scaffolds (design.md's Testing section already requires Pest, Vitest and Playwright; the original wording named only the linters, which left CI in 1.5 with nothing to run)
+- [x] 1.5 Add the CI workflow running API and web quality gates plus tests, and verify every command it runs passes locally (10/10 steps green; the workflow itself first executes on push, and the Playwright job is deferred to phase 2 because it needs the Compose stack)
 
 ## 2. Container topology
 
@@ -18,7 +18,7 @@
 
 ## 3. API foundation and Octane safety
 
-- [ ] 3.1 Establish the config contract so `env()` appears only under `config/`, and verify a static check fails when `env()` is used elsewhere
+- [ ] 3.1 Confirm the config contract is enforced — Larastan's `noEnvCallsOutsideOfConfig` rule already fails any `env()` call outside `config/` at level 8 — and verify it by asserting the analyser rejects a deliberate violation fixture
 - [ ] 3.2 Register Octane reset hooks for stateful services and verify the double-boot test asserting no state carries between requests passes
 - [ ] 3.3 Add the ClickHouse HTTP client wrapper with batch `JSONEachRow` insert and parameterized reads, and verify its unit tests pass against a live ClickHouse service
 - [ ] 3.4 Add `clickhouse:migrate` with a version-tracking table, and verify re-running it on an up-to-date instance changes nothing and exits zero
