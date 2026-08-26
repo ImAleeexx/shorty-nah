@@ -51,8 +51,31 @@ x-api-depends: &api-depends
     condition: service_healthy
   clickhouse:
     condition: service_healthy
+  # Nothing serves traffic against a schema that has not been applied. The
+  # schema service runs to completion first, which is what makes a version
+  # deploy safe: new code never meets an old table.
+  schema:
+    condition: service_completed_successfully
 
 services:
+  # A one-shot: applies both stores' schema, then exits. Every long-running
+  # application service waits for it to succeed.
+  schema:
+    <<: *api-image
+    command: ["schema"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    environment: *api-env
+    volumes:
+      - api-storage:/app/storage/app
+      - ${SETUP_TOKEN_DIR:-./run}:/var/lib/shortynah/setup
+
   edge:
     image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     restart: unless-stopped
@@ -93,6 +116,10 @@ services:
     <<: *api-image
     command: ["worker"]
     restart: unless-stopped
+    # SIGTERM, then this long to finish in flight. Longer than the longest job
+    # timeout, so a running job completes rather than being killed and retried.
+    stop_signal: SIGTERM
+    stop_grace_period: 120s
     depends_on: *api-depends
     environment: *api-env
     volumes:
@@ -109,6 +136,10 @@ services:
     <<: *api-image
     command: ["clicks"]
     restart: unless-stopped
+    # SIGTERM, then this long to finish in flight. Longer than the longest job
+    # timeout, so a running job completes rather than being killed and retried.
+    stop_signal: SIGTERM
+    stop_grace_period: 45s
     depends_on: *api-depends
     environment: *api-env
     volumes:
@@ -125,6 +156,10 @@ services:
     <<: *api-image
     command: ["scheduler"]
     restart: unless-stopped
+    # SIGTERM, then this long to finish in flight. Longer than the longest job
+    # timeout, so a running job completes rather than being killed and retried.
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
     depends_on: *api-depends
     environment: *api-env
     volumes:
