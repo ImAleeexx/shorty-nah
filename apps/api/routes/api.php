@@ -6,11 +6,22 @@ use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SessionController;
+use App\Http\Controllers\DomainController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\PublicConfigurationController;
+use App\Http\Controllers\TlsAuthorizationController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\RequireRecentAuthentication;
 use Illuminate\Support\Facades\Route;
+
+// The edge asks this before obtaining a certificate for a hostname, which
+// happens before any request on that hostname can succeed. It is unauthenticated
+// by necessity — the edge has no session — so it discloses nothing beyond
+// whether a host is served, and is rate limited against being used as an
+// enumeration oracle.
+Route::get('/internal/tls-authorize', TlsAuthorizationController::class)
+    ->middleware('throttle:tls-authorize')
+    ->name('internal.tls-authorize');
 
 Route::prefix('v1')->group(function (): void {
     // Read before anyone signs in, so the interface can render branding on first
@@ -28,6 +39,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 
+        Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
+
         Route::get('/invitations', [InvitationController::class, 'index'])->name('invitations.index');
         Route::get('/tokens', [ApiTokenController::class, 'index'])->name('tokens.index');
 
@@ -42,6 +55,11 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/invitations', [InvitationController::class, 'store'])->name('invitations.store');
             Route::delete('/invitations/{invitation}', [InvitationController::class, 'destroy'])
                 ->name('invitations.destroy');
+
+            Route::post('/domains', [DomainController::class, 'store'])->name('domains.store');
+            Route::post('/domains/{domain}/verify', [DomainController::class, 'verify'])->name('domains.verify');
+            Route::post('/domains/{domain}/promote', [DomainController::class, 'promote'])->name('domains.promote');
+            Route::delete('/domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
 
             Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');
             Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');

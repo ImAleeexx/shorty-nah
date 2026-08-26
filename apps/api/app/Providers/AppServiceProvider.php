@@ -2,14 +2,19 @@
 
 namespace App\Providers;
 
+use App\Domains\DnsResolver;
+use App\Domains\SystemDnsResolver;
 use App\Listeners\VerifyDependencies;
 use App\Settings\SettingsStore;
 use App\Support\TrustedProxies;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Http\Middleware\TrustProxies;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,6 +27,10 @@ class AppServiceProvider extends ServiceProvider
         // A singleton is correct here: the store holds a connection, a cache and
         // an encrypter, never request state. It deliberately memoises nothing,
         // so a value written by another worker is visible immediately.
+        // Resolution is swapped for a fake in tests; DNS in a suite is neither
+        // deterministic nor fast.
+        $this->app->bind(DnsResolver::class, SystemDnsResolver::class);
+
         $this->app->singleton(SettingsStore::class, fn (Application $app): SettingsStore => new SettingsStore(
             database: $app->make('db.connection'),
             cache: $app->make('cache.store'),
@@ -48,5 +57,11 @@ class AppServiceProvider extends ServiceProvider
         // every peer would let any client set its own apparent address, which
         // defeats redirect rate limiting and forges every geographic figure.
         TrustProxies::at(TrustedProxies::configured());
+
+        // Generous, because the edge legitimately asks on every first request to
+        // an unseen hostname, but bounded so the endpoint cannot be used to
+        // enumerate which domains an instance serves.
+        RateLimiter::for('tls-authorize', static fn (Request $request): Limit => Limit::perMinute(60)
+            ->by((string) $request->ip()));
     }
 }

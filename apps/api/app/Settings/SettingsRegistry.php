@@ -101,6 +101,10 @@ final class SettingsRegistry
             new Setting('branding.wordmark_path', SettingType::String, null, exposed: true),
             new Setting('branding.favicon_path', SettingType::String, null, exposed: true),
 
+            // --- Domains. Operational: the addresses a registered domain must
+            // resolve to for verification to succeed. ---
+            new Setting('domains.instance_addresses', SettingType::String),
+
             // --- Redirect behaviour ---
             new Setting(
                 'redirect.default_mode',
