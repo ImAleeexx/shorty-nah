@@ -101,14 +101,14 @@ e2e-setup-fixture: ## Return the instance to first boot (destructive, dev only)
 	$(API) php artisan shortynah:e2e-setup-reset
 
 e2e-setup: e2e-setup-fixture ## Walk the setup wizard in a browser from first boot
-	cd apps/web && pnpm exec playwright test e2e/setup.spec.ts
+	cd apps/web && pnpm exec playwright test --grep @firstboot
 
 # Ordered, because the wizard suite needs an uninstalled instance and everything
 # else needs an installed one. The wizard leaves it installed, then the fixture
 # seeds the domain and links the rest of the suite drives.
 e2e: e2e-setup ## Run the whole browser suite, wizard first
 	$(MAKE) e2e-fixture
-	cd apps/web && pnpm exec playwright test e2e/foundation.spec.ts e2e/interstitial.spec.ts
+	cd apps/web && pnpm exec playwright test --grep-invert @firstboot
 
 lint: lint-api lint-web ## Run every linter
 

@@ -25,7 +25,7 @@ const OWNER = {
 // One instance, walked once, in order. Every step depends on the one before it.
 test.describe.configure({ mode: 'serial' });
 
-test.describe('first boot', () => {
+test.describe('first boot @firstboot', () => {
   test('sends an uninstalled instance to setup', async ({ page }) => {
     await page.goto(`${APP}/`);
 

@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Stat } from '@/components/ui/stat';
 import { fetchPublicConfiguration } from '@/lib/api';
 import { sanitiseBranding } from '@/lib/branding';
+import { currentViewer } from '@/lib/session';
 
 export default async function DashboardPage() {
   const configuration = await fetchPublicConfiguration();
@@ -16,6 +17,12 @@ export default async function DashboardPage() {
   // An uninstalled instance has exactly one reachable destination.
   if (configuration !== null && !configuration.installed) {
     redirect('/setup');
+  }
+
+  const viewer = await currentViewer();
+
+  if (viewer === null) {
+    redirect('/sign-in');
   }
 
   const branding = sanitiseBranding(configuration);

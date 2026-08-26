@@ -66,6 +66,7 @@ Route::prefix('v1')->group(function (): void {
     Route::post('/auth/register', [RegistrationController::class, 'store'])->name('auth.register');
 
     Route::middleware([RequireInstallation::class, 'auth:sanctum'])->group(function (): void {
+        Route::get('/auth/user', [SessionController::class, 'show'])->name('auth.user');
         Route::delete('/auth/session', [SessionController::class, 'destroy'])->name('auth.session.destroy');
         Route::post('/auth/sessions/others', [PasswordController::class, 'destroyOtherSessions'])
             ->name('auth.sessions.others');

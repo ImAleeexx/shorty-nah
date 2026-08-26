@@ -8,7 +8,7 @@ import { expect, test } from '@playwright/test';
  * the edge without touching /etc/hosts.
  */
 const SHORT_URL = 'http://go.localhost:8080/e2ehold1';
-const DESTINATION = 'http://localhost:8080/';
+const DESTINATION = 'http://localhost:8080/sign-in';
 
 test.describe('interstitial mode', () => {
   test('renders the operator branding', async ({ page }) => {

@@ -17,7 +17,26 @@ async function expectedBranding(request: import('@playwright/test').APIRequestCo
   return config.branding;
 }
 
+const OPERATOR = { email: 'e2e@example.test', password: 'a quiet lantern drifts' };
+
+/**
+ * The dashboard is the surface these assertions are about, and it now requires a
+ * session — an unauthenticated viewer is sent to sign in, which is the correct
+ * product behaviour rather than something to work around.
+ */
+async function signIn(page: import('@playwright/test').Page) {
+  await page.goto('http://localhost:8080/sign-in');
+  await page.getByLabel('Email').fill(OPERATOR.email);
+  await page.getByLabel('Password').fill(OPERATOR.password);
+  await page.getByTestId('sign-in').click();
+  await expect(page).toHaveURL(APP);
+}
+
 test.describe('design foundation', () => {
+  test.beforeEach(async ({ page }) => {
+    await signIn(page);
+  });
+
   test('paints the operator accent on first render', async ({ page, request }) => {
     const expected = await expectedBranding(request);
 

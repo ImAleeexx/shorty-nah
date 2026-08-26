@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
 import { ThemeProvider } from '@/components/theme-provider';
+import { Toaster } from '@/components/ui/toaster';
 import { fetchPublicConfiguration } from '@/lib/api';
 import { sanitiseBranding } from '@/lib/branding';
 import { fontVariables } from '@/lib/fonts';
@@ -35,7 +36,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       }}
     >
       <body className="flex min-h-full flex-col">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

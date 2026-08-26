@@ -53,6 +53,26 @@ deploys to API deploys.
 *Alternative rejected:* Next.js on a separate hostname with token auth. Adds CORS, token storage, and a
 class of auth bugs, for no benefit here.
 
+### The interface is server-first with client islands
+
+A page's initial data is fetched by a server component through `INTERNAL_API_URL`, forwarding the
+viewer's session cookie. Everything the operator interacts with — the command palette, the link sheet,
+the charts, the virtualized table — is a client component that calls the API directly and asks the router
+to re-render after a write. Filtering and search resolve in the browser against data the page already
+holds, because a round trip per keystroke is the one thing this shape does badly.
+
+This keeps the browser bundle to what interaction actually needs, and keeps the React Server Components
+pipeline the interface direction depends on.
+
+*Alternative rejected:* a client-owned data layer over thin page shells. It is more responsive for
+filtering and sorting, but it duplicates authentication and error handling the server already performs,
+grows the bundle on the densest views, and gives up server rendering on an interface whose branding is
+already resolved server-side.
+
+*Alternative rejected:* fully server-rendered pages with form posts. The least JavaScript, but the phase
+requires a command palette, toasts, virtualization and animated counters, every one of which is
+inherently client-side — the model would be fought on every screen.
+
 ### Octane on FrankenPHP, and the state discipline it forces
 
 FrankenPHP in worker mode keeps the framework booted between requests, which is what makes a cached
