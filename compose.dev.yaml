@@ -33,6 +33,11 @@ services:
       # the host tree, which also puts Pest and Pint inside the container.
       - ./apps/api:/app
       - api-storage:/app/storage/app
+      # PHPStan's cache holds absolute paths and a resolved DI container, so the
+      # host tree and the container poison each other's entries through the bind
+      # mount above - which surfaced as a rename() into a directory the other
+      # side had just replaced. Each keeps its own.
+      - api-phpstan-cache:/app/storage/framework/cache/phpstan
       - geoip-data:/geoip:ro
 
   worker:
@@ -90,5 +95,6 @@ services:
       - "127.0.0.1:${DEV_CLICKHOUSE_PORT:-8124}:8123"
 
 volumes:
+  api-phpstan-cache:
   web-node-modules:
   web-next:
