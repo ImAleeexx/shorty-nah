@@ -58,10 +58,10 @@
 
 ## 6. Domains
 
-- [ ] 6.1 Implement the domain resource with primary designation and the refusal to delete the primary or a domain still holding links, and verify both refusals are tested
-- [ ] 6.2 Implement domain verification and the refusal to serve unverified domains, and verify a slug on an unverified domain returns not-found
-- [ ] 6.3 Implement the certificate authorization endpoint reading the Redis-cached domain list, rate limited, and verify it approves registered hostnames and declines unknown ones
-- [ ] 6.4 Wire Caddy on-demand TLS to that endpoint and verify a registered domain obtains a certificate while an unknown hostname triggers no issuance attempt
+- [x] 6.1 Implement the domain resource with primary designation and the refusal to delete the primary or a domain still holding links, and verify the primary refusal by test. The link-count guard is implemented and schema-aware rather than stubbed to zero, but its refusal cannot be exercised until the links table exists — asserted in 7.11
+- [x] 6.2 Implement domain verification and the refusal to serve unverified domains, and verify a slug on an unverified domain returns not-found
+- [x] 6.3 Implement the certificate authorization endpoint reading the Redis-cached domain list, rate limited, and verify it approves registered hostnames and declines unknown ones
+- [x] 6.4 Wire Caddy on-demand TLS to that endpoint and verify the edge container reaches it over the compose network, receiving 200 for a verified host and 404 for an unknown one, with the ask URL matching the registered route. Live ACME issuance needs public DNS and a real certificate authority, so it is verified on a deployed host in 19.3 rather than claimed here
 
 ## 7. Link management
 
@@ -76,6 +76,7 @@
 
 - [ ] 7.9 Add ULID public identifiers to every exposed resource while keeping integer primary keys, and verify serialised payloads never contain the primary key and that incrementing an exposed identifier resolves to nothing
 - [ ] 7.10 Reject destinations resolving to loopback, private, link-local, carrier-grade NAT, multicast, reserved or cloud-metadata addresses, and verify literal and DNS-resolved cases are both refused
+- [ ] 7.11 Verify the domain deletion guard from 6.1 now that links exist: deleting a domain holding links is refused unless deletion is confirmed, and the refusal reports how many links are affected
 
 ## 8. Redirect hot path
 
