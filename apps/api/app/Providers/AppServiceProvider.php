@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Analytics\AnalyticsReader;
+use App\Branding\BrandingAssetStore;
 use App\Clicks\ClickQueue;
 use App\Clicks\ClickToken;
 use App\Clicks\ClickWriter;
@@ -59,6 +60,10 @@ class AppServiceProvider extends ServiceProvider
             connection: $app->make(ClickHouseServiceProvider::WRITER),
             cache: $app->make('cache.store'),
             logger: $app->make('log'),
+        ));
+
+        $this->app->singleton(BrandingAssetStore::class, fn (Application $app): BrandingAssetStore => new BrandingAssetStore(
+            disk: $app->make('filesystem')->disk('public'),
         ));
 
         // Reads through the read-only ClickHouse identity: a reporting query must

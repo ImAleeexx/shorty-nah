@@ -131,6 +131,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Lint CSS
+        # The motion contract in stylesheets: ESLint cannot see CSS, so the same
+        # rules are enforced by stylelint.
+        run: pnpm lint:css
+
       - name: Typecheck
         run: pnpm typecheck
 

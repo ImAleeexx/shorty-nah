@@ -123,26 +123,26 @@
 
 ## 12. Web foundation, design system, and branding
 
-- [ ] 12.1 Install the chosen libraries (base-ui, cmdk, Sonner, motion, NumberFlow, recharts, Virtuoso, zustand, clsx, cva, next-themes) and verify `pnpm build` and `pnpm typecheck` still pass
-- [ ] 12.2 Set up the typeface trio (geometric sans, mono, editorial serif) self-hosted with correct subsetting, and verify no banned face (Inter, Roboto, Helvetica, Open Sans) appears in the built CSS or network requests
-- [ ] 12.3 Set up Phosphor icons at one standardized weight behind a single icon module, and verify a lint rule fails on any import from another icon package
-- [ ] 12.4 Establish the OKLCH token set mapped through Tailwind `@theme inline` to CSS custom properties, and verify utilities resolve to variables rather than literal colours in the built CSS
-- [ ] 12.5 Establish the motion token layer (`--ease-out`, `--ease-in-out`, `--ease-drawer`, the duration scale) and verify no component declares a raw `cubic-bezier` or bare millisecond value
-- [ ] 12.6 Add the lint rules banning `transition: all`, `scale(0)` entrances, `ease-in` on UI elements, and animation of layout-triggering properties, and verify each rule fails on a deliberate violation fixture
-- [ ] 12.7 Wire `next-themes` with the `[data-theme]` attribute and verify no light/dark flash on a cold load in either system preference
-- [ ] 12.8 Implement server-side branding injection into the initial document and verify no default-accent paint occurs before branded styling applies
-- [ ] 12.9 Implement derived accent states by OKLCH lightness and chroma shifts, and verify hover, active, and muted variants are generated from a single accent input
-- [ ] 12.10 Implement the contrast check warning on accent colours failing the threshold in either mode, and verify body and heading text still pass under any accent
-- [ ] 12.11 Enforce the branding bounds (single accent hue, radius clamped to range, typeface from the curated list) and verify out-of-range radius and off-list typeface are both rejected with their permitted values stated
-- [ ] 12.12 Implement branding asset upload with type and size validation, and verify unsupported and oversized assets are rejected with the limits stated
-- [ ] 12.13 Build the primitive component set on base-ui (dialog, sheet, popover, select, tooltip, menu) with `var(--transform-origin)` wired for trigger-anchored surfaces, and verify keyboard focus, dismissal, and focus return behave correctly in each
-- [ ] 12.14 Apply the interaction feedback baseline — `scale(0.97)` press at 100–160ms, hover motion gated behind `@media (hover: hover) and (pointer: fine)` — and verify a tap on a touch device fires no hover state
-- [ ] 12.15 Build the asymmetric bento application shell with hairline borders, clamped radii, no stock Tailwind shadows, and generous internal padding, and verify it collapses to a single column below 768px with all span overrides reset
-- [ ] 12.16 Add the `prefers-reduced-motion` variants across the component set and verify movement is removed while opacity and colour transitions that aid comprehension remain
-- [ ] 12.17 Verify the frequency gate holds in the built interface: the command palette and keyboard navigation have no open/close animation, table sort and filter do not transition rows, and no dashboard surface uses scroll-entry motion
+- [x] 12.1 Install the chosen libraries (base-ui, cmdk, Sonner, motion, NumberFlow, recharts, Virtuoso, zustand, clsx, cva, next-themes) and verify `pnpm build` and `pnpm typecheck` still pass
+- [x] 12.2 Set up the typeface trio (Geist, Geist Mono, Instrument Serif) self-hosted from npm with no build-time network, and verify in a browser that the resolved font stack names no banned face. A lint rule additionally forbids `next/font/google`, which would reintroduce a build-time fetch
+- [x] 12.3 Set up Phosphor icons at one standardized weight behind a single icon module, and verify a lint rule fails on any import from another icon package
+- [x] 12.4 Establish the OKLCH token set mapped through Tailwind `@theme inline` to CSS custom properties, and verify utilities resolve to variables rather than literal colours in the built CSS
+- [x] 12.5 Establish the motion token layer (`--ease-out`, `--ease-in-out`, `--ease-drawer`, the duration scale) and verify no component declares a raw `cubic-bezier` or bare millisecond value
+- [x] 12.6 Add the lint rules banning `transition: all`, `scale(0)` entrances, `ease-in` on UI elements, and animation of layout-triggering properties, and verify each rule fails on a deliberate violation fixture
+- [x] 12.7 Wire `next-themes` with the `[data-theme]` attribute and verify no light/dark flash on a cold load in either system preference
+- [x] 12.8 Implement server-side branding injection into the initial document and verify no default-accent paint occurs before branded styling applies
+- [x] 12.9 Implement derived accent states by OKLCH lightness and chroma shifts, and verify hover, active, and muted variants are generated from a single accent input
+- [x] 12.10 Implement the contrast check warning on accent colours failing the threshold in either mode, and verify body and heading text still pass under any accent
+- [x] 12.11 Enforce the branding bounds (single accent hue, radius clamped to range, typeface from the curated list) and verify out-of-range radius and off-list typeface are both rejected with their permitted values stated
+- [x] 12.12 Implement branding asset upload with type and size validation, and verify unsupported and oversized assets are rejected with the limits stated
+- [x] 12.13 Build the primitive component set on base-ui (dialog, sheet, popover, select, tooltip, menu) with `var(--transform-origin)` wired for trigger-anchored surfaces, and verify keyboard focus, dismissal, and focus return behave correctly in each
+- [x] 12.14 Apply the interaction feedback baseline — `scale(0.97)` press at 100–160ms, hover motion gated behind `@media (hover: hover) and (pointer: fine)` — and verify a tap on a touch device fires no hover state
+- [x] 12.15 Build the asymmetric bento application shell with hairline borders, clamped radii, no stock Tailwind shadows, and generous internal padding, and verify it collapses to a single column below 768px with all span overrides reset
+- [x] 12.16 Add the `prefers-reduced-motion` variants across the component set and verify movement is removed while opacity and colour transitions that aid comprehension remain
+- [x] 12.17 Verify the frequency gate holds in the built interface: the command palette and keyboard navigation have no open/close animation, table sort and filter do not transition rows, and no dashboard surface uses scroll-entry motion
 
-- [ ] 12.18 Plumb per-request CSP nonces through the web app and emit a policy with no inline or eval allowance, and verify an injected script without a nonce does not execute and that nonces differ between responses
-- [ ] 12.19 Determine branding upload format by decoding, refuse SVG, cap pixel dimensions before full decode, re-encode to strip metadata, and store under a generated name, and verify a renamed non-image and an oversized image are both refused
+- [x] 12.18 Plumb per-request CSP nonces through the web app and emit a policy with no inline or eval allowance, and verify an injected script without a nonce does not execute and that nonces differ between responses
+- [x] 12.19 Determine branding upload format by decoding, refuse SVG, cap pixel dimensions before full decode, re-encode to strip metadata, and store under a generated name, and verify a renamed non-image and an oversized image are both refused
 
 ## 13. Setup experience
 
