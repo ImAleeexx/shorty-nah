@@ -42,5 +42,9 @@
              publishes it on this port; credentials come from .env. -->
         <env name="CLICKHOUSE_HOST" value="127.0.0.1"/>
         <env name="CLICKHOUSE_PORT" value="8124"/>
+        <!-- The click queue is a Redis list, not a cache entry, so tests that
+             exercise it use the real server the dev stack publishes. -->
+        <env name="REDIS_HOST" value="127.0.0.1"/>
+        <env name="REDIS_PORT" value="6380"/>
     </php>
 </phpunit>

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Clicks\ClickEnvelope;
+use App\Clicks\ClickQueue;
 use App\Clicks\ClickToken;
 use App\Clicks\InterstitialPresenter;
 use App\Enums\RedirectMode;
@@ -15,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
@@ -29,6 +32,7 @@ final class RedirectController
     public function __construct(
         private readonly ClickToken $tokens,
         private readonly InterstitialPresenter $interstitial,
+        private readonly ClickQueue $clicks,
     ) {}
 
     private const PASSWORD_MAX_ATTEMPTS = 8;
@@ -102,13 +106,89 @@ final class RedirectController
 
     private function send(Request $request, ResolvedLink $link, ClickCounter $clicks): SymfonyResponse
     {
-        // Counted before responding so a limit cannot be exceeded by a burst that
-        // all reads the pre-increment value.
-        $clicks->increment($link->id);
+        $speculative = $this->isSpeculative($request);
 
-        return $link->mode === RedirectMode::Interstitial
-            ? $this->interstitial($link)
+        if (! $speculative) {
+            // Counted before responding so a limit cannot be exceeded by a burst
+            // that all reads the pre-increment value.
+            $clicks->increment($link->id);
+        }
+
+        $response = $link->mode === RedirectMode::Interstitial
+            ? $this->interstitial($link, $speculative)
             : $this->direct($link);
+
+        // Direct redirects record here; the interstitial records when its own
+        // click token is issued, so the beacon has something to attach to.
+        if (! $speculative && $link->mode !== RedirectMode::Interstitial) {
+            $this->record($request, $link, (string) Str::ulid());
+        }
+
+        return $response;
+    }
+
+    /**
+     * Whether the request is a browser looking ahead rather than a person
+     * arriving.
+     *
+     * A prefetch, a preload and a HEAD probe all fetch the URL without anyone
+     * having decided to follow it. Counting them would inflate every figure, and
+     * link-preview generators make them common.
+     */
+    private function isSpeculative(Request $request): bool
+    {
+        if ($request->isMethod('HEAD')) {
+            return true;
+        }
+
+        $purposeHeaders = [
+            $request->header('Sec-Purpose'),
+            $request->header('Purpose'),
+            $request->header('X-Purpose'),
+            $request->header('X-Moz'),
+        ];
+
+        foreach ($purposeHeaders as $value) {
+            if (! is_string($value) || $value === '') {
+                continue;
+            }
+
+            $normalised = mb_strtolower($value);
+
+            if (str_contains($normalised, 'prefetch') || str_contains($normalised, 'preview') || str_contains($normalised, 'preload')) {
+                return true;
+            }
+        }
+
+        // Chrome's newer form. Anything other than a top-level navigation is not
+        // a person arriving.
+        $mode = $request->header('Sec-Fetch-Mode');
+        $dest = $request->header('Sec-Fetch-Dest');
+
+        if (is_string($mode) && is_string($dest) && $mode === 'navigate' && $dest === 'empty') {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Pushes the envelope and returns. No enrichment, no database, no waiting:
+     * everything about this click is worked out later, so the event store being
+     * slow or unreachable cannot delay or break a redirect.
+     */
+    private function record(Request $request, ResolvedLink $link, string $clickId): void
+    {
+        $this->clicks->push(new ClickEnvelope(
+            clickId: $clickId,
+            linkId: $link->id,
+            domainId: $link->domainId,
+            occurredAt: now()->format('Y-m-d H:i:s'),
+            address: $request->ip(),
+            userAgent: $request->userAgent(),
+            referrer: $request->headers->get('referer'),
+            redirectMode: $link->mode->value,
+        ));
     }
 
     private function direct(ResolvedLink $link): RedirectResponse
@@ -120,7 +200,7 @@ final class RedirectController
         return $this->withNoStore($response, $link);
     }
 
-    private function interstitial(ResolvedLink $link): Response
+    private function interstitial(ResolvedLink $link, bool $speculative = false): Response
     {
         $issued = $this->tokens->issue($link->id);
 
@@ -137,6 +217,12 @@ final class RedirectController
         ])->render());
 
         $response->headers->set('Content-Security-Policy', $this->policy($nonce));
+
+        // Recorded with the token's own click identifier so the beacon's signals
+        // land on this click rather than a different one.
+        if (! $speculative) {
+            $this->record(request(), $link, $issued['click_id']);
+        }
 
         return $this->withNoStore($response, $link);
     }

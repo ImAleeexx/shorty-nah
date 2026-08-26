@@ -12,4 +12,10 @@ return [
      * or CIDR ranges. A wildcard is rejected by shortynah:verify-env.
      */
     'trusted_proxies' => env('TRUSTED_PROXIES'),
+
+    /*
+     * Where the geoipupdate sidecar writes its databases. Enrichment degrades to
+     * non-geographic when they are absent rather than failing.
+     */
+    'geoip_path' => env('GEOIP_PATH', '/geoip'),
 ];

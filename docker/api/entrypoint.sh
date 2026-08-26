@@ -58,6 +58,14 @@ case "${1:-octane}" in
         exec php artisan horizon
         ;;
 
+    clicks)
+        verify_environment
+        warm_caches
+        # A dedicated drain loop rather than a queued job per click: the event
+        # store wants batches, and a job per click would defeat that.
+        exec php artisan shortynah:drain-clicks --daemon --batch=1000 --sleep=1
+        ;;
+
     scheduler)
         verify_environment
         warm_caches

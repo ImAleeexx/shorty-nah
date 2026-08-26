@@ -154,6 +154,7 @@ final class RedirectResolver
             ->where('links.slug', $slug)
             ->select([
                 'links.id',
+                'links.domain_id',
                 'links.public_id',
                 'links.destination',
                 'links.redirect_mode',
@@ -171,13 +172,14 @@ final class RedirectResolver
 
     private function hydrate(object $row): ResolvedLink
     {
-        /** @var object{id: int, public_id: string, destination: string, redirect_mode: ?string, password_hash: ?string, expires_at: ?string, max_clicks: ?int, click_count: int, disabled_at: ?string, referrer_policy: ?string} $row */
+        /** @var object{id: int, domain_id: int, public_id: string, destination: string, redirect_mode: ?string, password_hash: ?string, expires_at: ?string, max_clicks: ?int, click_count: int, disabled_at: ?string, referrer_policy: ?string} $row */
         $mode = $row->redirect_mode === null
             ? $this->instanceDefaultMode()
             : (RedirectMode::tryFrom($row->redirect_mode) ?? $this->instanceDefaultMode());
 
         return new ResolvedLink(
             id: (int) $row->id,
+            domainId: (int) $row->domain_id,
             publicId: (string) $row->public_id,
             destination: (string) $row->destination,
             mode: $mode,

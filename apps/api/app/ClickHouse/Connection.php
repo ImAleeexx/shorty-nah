@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ClickHouse;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\PendingRequest;
 use JsonException;
@@ -120,10 +121,18 @@ final class Connection
             $query['param_'.$name] = is_bool($value) ? ($value ? '1' : '0') : (string) $value;
         }
 
-        $response = $this->request()
-            ->withQueryParameters($query)
-            ->withBody($body ?? '', 'text/plain')
-            ->post('/');
+        try {
+            $response = $this->request()
+                ->withQueryParameters($query)
+                ->withBody($body ?? '', 'text/plain')
+                ->post('/');
+        } catch (ConnectionException $e) {
+            // A refused connection or a timeout must present as the same failure
+            // type as a rejected statement. Callers already handle
+            // ClickHouseException; letting a transport error escape would crash
+            // the drain instead of degrading it.
+            throw new ClickHouseException('ClickHouse is unreachable.', previous: $e);
+        }
 
         if ($response->failed()) {
             // ClickHouse puts the reason in the body; the statement itself is not

@@ -18,6 +18,7 @@ final class ResolvedLink
 {
     public function __construct(
         public readonly int $id,
+        public readonly int $domainId,
         public readonly string $publicId,
         public readonly string $destination,
         public readonly RedirectMode $mode,
@@ -36,6 +37,7 @@ final class ResolvedLink
     {
         return [
             'id' => $this->id,
+            'domain_id' => $this->domainId,
             'public_id' => $this->publicId,
             'destination' => $this->destination,
             'mode' => $this->mode->value,
@@ -55,6 +57,7 @@ final class ResolvedLink
     {
         return new self(
             id: is_int($payload['id'] ?? null) ? $payload['id'] : 0,
+            domainId: is_int($payload['domain_id'] ?? null) ? $payload['domain_id'] : 0,
             publicId: is_string($payload['public_id'] ?? null) ? $payload['public_id'] : '',
             destination: is_string($payload['destination'] ?? null) ? $payload['destination'] : '',
             mode: RedirectMode::tryFrom(is_string($payload['mode'] ?? null) ? $payload['mode'] : '') ?? RedirectMode::Direct,

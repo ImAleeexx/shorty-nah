@@ -2,7 +2,13 @@
 
 namespace App\Providers;
 
+use App\Clicks\ClickQueue;
 use App\Clicks\ClickToken;
+use App\Clicks\ClickWriter;
+use App\Clicks\GeoLookup;
+use App\Clicks\GeoResolver;
+use App\Clicks\RedisClickQueue;
+use App\Clicks\VisitorHash;
 use App\Domains\DnsResolver;
 use App\Domains\SystemDnsResolver;
 use App\Links\DatabaseSlugAvailability;
@@ -36,6 +42,23 @@ class AppServiceProvider extends ServiceProvider
         // deterministic nor fast.
         $this->app->bind(DnsResolver::class, SystemDnsResolver::class);
         $this->app->bind(SlugAvailability::class, DatabaseSlugAvailability::class);
+
+        $this->app->bind(ClickQueue::class, RedisClickQueue::class);
+
+        $this->app->singleton(GeoResolver::class, fn (Application $app): GeoResolver => new GeoLookup(
+            databasePath: ConfigValue::string(config('shortynah.geoip_path'), 'GEOIP_PATH'),
+        ));
+
+        $this->app->singleton(VisitorHash::class, fn (Application $app): VisitorHash => new VisitorHash(
+            cache: $app->make('cache.store'),
+            applicationKey: ConfigValue::string(config('app.key'), 'APP_KEY'),
+        ));
+
+        $this->app->singleton(ClickWriter::class, fn (Application $app): ClickWriter => new ClickWriter(
+            connection: $app->make(ClickHouseServiceProvider::WRITER),
+            cache: $app->make('cache.store'),
+            logger: $app->make('log'),
+        ));
 
         // Signed with the application key: a beacon token must be unmintable by
         // anyone who does not already hold the instance's secret.
