@@ -96,6 +96,9 @@ test-web: ## Run the Vitest suite
 
 e2e-fixture: ## Seed the fixture the browser suite drives
 	$(API) php artisan shortynah:e2e-fixture
+	# The redirect is rate limited per address, so a corpus large enough to
+	# exercise the virtualized drill-down cannot be produced by driving it.
+	$(API) php artisan shortynah:e2e-clicks --count=3000
 
 e2e-setup-fixture: ## Return the instance to first boot (destructive, dev only)
 	$(API) php artisan shortynah:e2e-setup-reset
