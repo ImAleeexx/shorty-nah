@@ -1,0 +1,91 @@
+# Development overrides. Source is mounted so an edit is visible without a
+# rebuild, and the edge serves plain HTTP because ACME needs public DNS.
+
+services:
+  edge:
+    volumes:
+      - ./docker/caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  api: &api-dev
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+      target: development
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      # Recycling the worker after each request is what makes a mounted edit
+      # take effect without a rebuild. FrankenPHP's watch mode would need Node
+      # inside the image, which is not worth carrying for this.
+      OCTANE_MAX_REQUESTS: 1
+    volumes:
+      # Vendor is deliberately not shadowed by a volume: the image installs
+      # --no-dev, and a volume over vendor leaves the host's cached package
+      # manifest referencing dev providers the container cannot load. Dev shares
+      # the host tree, which also puts Pest and Pint inside the container.
+      - ./apps/api:/app
+      - api-storage:/app/storage/app
+      - geoip-data:/geoip:ro
+
+  worker:
+    <<: *api-dev
+
+  scheduler:
+    <<: *api-dev
+
+  web:
+    image: node:24-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df
+    working_dir: /app
+    command:
+      - sh
+      - -c
+      - "corepack enable && pnpm install --frozen-lockfile --ignore-scripts && pnpm dev"
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    volumes:
+      - ./apps/web:/app
+      # Anonymous volume so the container keeps its own linux-native modules
+      # rather than the host's.
+      - web-node-modules:/app/node_modules
+      - web-next:/app/.next
+    healthcheck:
+      # The plain node image carries no curl, so probe with the runtime itself.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
+
+  # Without MaxMind credentials this exits immediately; locally that should be a
+  # single quiet failure, not a restart loop. Enrichment degrades to
+  # non-geographic, which the analytics spec allows.
+  geoipupdate:
+    restart: "no"
+
+  # Exposed locally for inspection. Production publishes nothing but the edge.
+  postgres:
+    ports:
+      - "127.0.0.1:${DEV_DB_PORT:-5433}:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:${DEV_REDIS_PORT:-6380}:6379"
+
+  clickhouse:
+    ports:
+      - "127.0.0.1:${DEV_CLICKHOUSE_PORT:-8124}:8123"
+
+volumes:
+  web-node-modules:
+  web-next:

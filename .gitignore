@@ -25,6 +25,7 @@
 
 # Node / Next.js
 node_modules/
+.pnpm-store/
 /apps/web/.next/
 /apps/web/out/
 /apps/web/next-env.d.ts

@@ -16,6 +16,7 @@ Makefile
 
 # Dependencies and build output are produced inside the image
 **/node_modules
+**/.pnpm-store
 **/vendor
 **/.next
 **/.turbo

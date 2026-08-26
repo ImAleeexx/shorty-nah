@@ -1,0 +1,63 @@
+{
+	# The admin API needs no consumer here and is an unauthenticated control
+	# plane if left listening.
+	admin off
+
+	email {$CADDY_ACME_EMAIL}
+
+	# Certificates for operator-registered short domains are issued on demand,
+	# but only for hostnames the application confirms it serves. Without this
+	# gate any hostname pointed at the instance would trigger an issuance
+	# attempt and exhaust the authority's rate limits.
+	on_demand_tls {
+		ask http://api:8000/api/internal/tls-authorize
+	}
+}
+
+(hardening) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy "same-origin"
+
+		# Belt-and-braces for clients predating frame-ancestors. The
+		# authoritative framing rule lives in the application's own CSP, which
+		# the edge must not duplicate: two CSP headers intersect, and the edge
+		# cannot know the per-request nonce.
+		X-Frame-Options "DENY"
+
+		-Server
+		-X-Powered-By
+	}
+}
+
+# Operator interface. Reserved paths belong to the API; everything else is the
+# Next.js app.
+{$APP_DOMAIN} {
+	import hardening
+
+	# Bare paths are listed alongside their subtrees: a /horizon/* matcher
+	# alone does not match /horizon itself.
+	@api path /api/* /horizon /horizon/* /storage /storage/* /up
+	handle @api {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+# Every registered short domain. All paths resolve through the redirect path, so
+# this block never reaches the web app.
+:443 {
+	import hardening
+
+	tls {
+		on_demand
+	}
+
+	reverse_proxy api:8000
+}
