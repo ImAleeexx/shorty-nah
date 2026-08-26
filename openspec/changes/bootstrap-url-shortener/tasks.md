@@ -34,10 +34,10 @@
 
 ## 4. Settings store
 
-- [ ] 4.1 Implement the typed settings store with encrypted sensitive values and Redis caching invalidated on write, and verify a changed setting is observed on the next request without restart
-- [ ] 4.2 Reject unknown setting keys and verify the rejection test passes
-- [ ] 4.3 Ensure sensitive settings are never serialized into API responses and verify a test asserting their absence passes
-- [ ] 4.4 Expose the unauthenticated public configuration endpoint limited to the interface subset, and verify a test asserts no sensitive or operational keys are present
+- [x] 4.1 Implement the typed settings store with encrypted sensitive values and Redis caching invalidated on write, and verify a changed setting is observed on the next request without restart
+- [x] 4.2 Reject unknown setting keys and verify the rejection test passes
+- [x] 4.3 Ensure sensitive settings are never serialized into API responses and verify a test asserting their absence passes
+- [x] 4.4 Expose the unauthenticated public configuration endpoint limited to the interface subset, and verify a test asserts no sensitive or operational keys are present
 
 ## 5. Identity
 
