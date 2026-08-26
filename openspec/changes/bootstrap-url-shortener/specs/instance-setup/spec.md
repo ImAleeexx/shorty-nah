@@ -18,6 +18,31 @@ on the application domain.
 - **WHEN** a client calls any authenticated API endpoint on an uninstalled instance
 - **THEN** the system responds `503` with a body indicating that setup is incomplete
 
+### Requirement: Setup cannot be claimed without proof of host access
+On first boot the system SHALL generate a high-entropy setup token, emit it to the container log and write
+it to a file inside a host-mounted location, and SHALL require that token before the setup flow accepts any
+configuration. The token SHALL be invalidated when installation completes.
+
+#### Scenario: Setup reached without the token
+- **WHEN** a visitor opens the setup flow on an uninstalled instance and does not supply the setup token
+- **THEN** the system presents only the token prompt and accepts no configuration, creates no account, and reveals nothing about the instance beyond that it is uninstalled
+
+#### Scenario: Setup reached with the token
+- **WHEN** a visitor supplies the setup token generated for this instance
+- **THEN** the system admits them to the wizard
+
+#### Scenario: Incorrect token
+- **WHEN** an incorrect setup token is submitted
+- **THEN** the system refuses, records the attempt, and rate-limits repeated attempts from that source
+
+#### Scenario: Token after installation
+- **WHEN** installation has completed
+- **THEN** the token no longer grants access to anything and is removed from the host-mounted location
+
+#### Scenario: Token survives a restart before installation
+- **WHEN** the instance restarts while still uninstalled
+- **THEN** the same token remains valid, rather than a new one being generated
+
 ### Requirement: Setup verifies its dependencies before accepting configuration
 The setup flow SHALL confirm that Postgres, Redis, and ClickHouse are reachable, and SHALL NOT allow the
 operator to continue past the connectivity step while any of them is unreachable.
@@ -30,6 +55,14 @@ operator to continue past the connectivity step while any of them is unreachable
 #### Scenario: All datastores reachable
 - **WHEN** the operator requests the connectivity check and every dependency responds
 - **THEN** the system reports each dependency as healthy and unlocks the next step
+
+### Requirement: The connectivity check probes only configured dependencies
+The system SHALL check only the datastores named by its own environment configuration, and SHALL NOT accept
+a host, port, or connection string supplied through the setup flow.
+
+#### Scenario: Caller supplies a host to check
+- **WHEN** a request to the connectivity step includes a host or connection string
+- **THEN** the system ignores it and checks only its configured dependencies
 
 ### Requirement: Setup collects the instance's initial configuration
 The setup flow SHALL collect, in order, an administrator account, the instance identity and its primary

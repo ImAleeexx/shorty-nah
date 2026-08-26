@@ -46,6 +46,22 @@ not a supported image format.
 - **WHEN** an administrator uploads a branding asset that is not a supported image format
 - **THEN** the system rejects it and states the supported formats
 
+#### Scenario: Scriptable image format
+- **WHEN** an administrator uploads an SVG, or any format that can carry script or external references
+- **THEN** the system rejects it, because branding assets are served from the same origin as the interface
+
+#### Scenario: Format disguised by name or declared type
+- **WHEN** an uploaded file's extension or declared content type claims a supported image format but its contents are not that format
+- **THEN** the system rejects it, having determined the format by decoding the file rather than trusting the claim
+
+#### Scenario: Dimensions far beyond what is needed
+- **WHEN** an uploaded image decodes to pixel dimensions beyond the configured maximum
+- **THEN** the system rejects it before allocating memory for the full image
+
+#### Scenario: A stored asset is served
+- **WHEN** a branding asset is served
+- **THEN** it is stored under a generated name, served with a content type from a server-side allowlist and with sniffing disabled, and the client-supplied filename is never used as a path
+
 #### Scenario: Oversized asset
 - **WHEN** an administrator uploads an asset exceeding the configured size limit
 - **THEN** the system rejects it and states the limit

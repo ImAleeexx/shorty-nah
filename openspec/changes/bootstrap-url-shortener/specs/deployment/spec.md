@@ -90,6 +90,30 @@ and uploaded branding assets, and a restore path that produces a working instanc
 - **WHEN** an operator restores those artefacts onto a clean host and brings the instance up
 - **THEN** links resolve and historical reports are available
 
+### Requirement: Datastores are not reachable from outside the host
+The system SHALL keep Postgres, Redis, and ClickHouse on an internal network without publishing their ports
+to the host by default, and SHALL require authentication on each.
+
+#### Scenario: Inspecting published ports
+- **WHEN** an operator lists the published ports of a running instance
+- **THEN** only the edge proxy's ports are published
+
+#### Scenario: Redis without a password
+- **WHEN** Redis is configured without a password
+- **THEN** the dependent services fail their environment validation and do not start
+
+### Requirement: Backups are encrypted at rest
+The system SHALL encrypt backup artefacts, because they contain the settings store including encrypted
+secrets, session data, and the application key material needed to read them.
+
+#### Scenario: A backup is produced
+- **WHEN** the backup operation completes
+- **THEN** its artefacts are encrypted and cannot be read without the configured backup key
+
+#### Scenario: Restoring without the key
+- **WHEN** a restore is attempted without the backup key
+- **THEN** the operation fails without partially writing data
+
 ### Requirement: Images contain no instance secrets
 The system SHALL supply all credentials and instance-specific values at runtime, and SHALL NOT embed them
 in container images.

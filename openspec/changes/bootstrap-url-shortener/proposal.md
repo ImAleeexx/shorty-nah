@@ -26,6 +26,15 @@ data; existing self-hosted ones generally trade away either analytics depth or d
   endpoint that gates Caddy's on-demand certificate issuance.
 - Store no raw visitor IP addresses; geo and ASN are resolved during enrichment and the address is
   discarded.
+- Gate the setup flow behind a token generated at first boot and readable only from the container log or a
+  host-mounted file, so an instance reachable before installation cannot be claimed by a stranger.
+- Introduce two-factor authentication with authenticator-app codes and WebAuthn passkeys, optional per
+  account and enforceable instance-wide.
+- Introduce an append-only audit log of security-relevant events.
+- Establish instance-wide security rules: authorization of every object reference, non-enumerable public
+  identifiers, a trusted-proxy contract for client addresses, hardened response headers with a
+  nonce-based content security policy, abuse limits on every unauthenticated surface, and supply-chain
+  scanning that blocks a release.
 
 ## Capabilities
 
@@ -46,6 +55,9 @@ data; existing self-hosted ones generally trade away either analytics depth or d
 - `branding`: Operator-controlled visual identity applied at runtime, and light/dark behaviour.
 - `deployment`: The container topology, health checks, migration and schema application flow, backups,
   and the environment contract for a single-host deploy.
+- `security`: The rules no single feature owns — authorization of object references, identifier
+  enumeration, the trusted-proxy contract, response hardening and the script policy, abuse limits, the
+  audit log, diagnostic redaction, and supply-chain scanning.
 
 ### Modified Capabilities
 
@@ -65,3 +77,6 @@ None — this is the first change in the repository.
 - **Operational commitments**: because Octane keeps workers alive across requests, request-scoped
   state must not be held in singletons or static properties; this constrains how services are bound
   throughout the API.
+- **Security posture**: the trusted-proxy contract is load-bearing for both rate limiting and analytics
+  accuracy, and the nonce-based content security policy constrains how the interstitial and the
+  interface emit inline style and script. Both are far cheaper to establish now than to retrofit.

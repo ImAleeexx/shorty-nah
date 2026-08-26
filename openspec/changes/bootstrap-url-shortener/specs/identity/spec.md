@@ -61,6 +61,117 @@ identically whether an email address exists or not.
 - **WHEN** a visitor attempts to sign in with an email address that has no account
 - **THEN** the system returns the same failure response and timing characteristics as a wrong password
 
+### Requirement: Passwords are stored and checked safely
+The system SHALL hash passwords with a memory-hard algorithm at a tuned cost, SHALL compare candidate
+passwords in constant time, and SHALL NOT store, log, or transmit a password in recoverable form.
+
+#### Scenario: A password is stored
+- **WHEN** an account's password is set or changed
+- **THEN** only a memory-hard hash is persisted, and the plaintext appears in no log or diagnostic
+
+#### Scenario: A weak password is submitted
+- **WHEN** a password shorter than the configured minimum, or one appearing in the bundled list of commonly
+  used passwords, is submitted
+- **THEN** the system rejects it and states the requirement
+
+#### Scenario: Hash cost is raised later
+- **WHEN** the configured hash cost is increased and an account signs in successfully with its existing password
+- **THEN** the stored hash is transparently upgraded to the new cost
+
+### Requirement: Sessions are bound to a single privilege level
+The system SHALL issue a new session identifier on authentication and on any change of privilege, SHALL
+mark session cookies as secure, HTTP-only, and same-site, and SHALL invalidate an account's other sessions
+when its password changes.
+
+#### Scenario: Signing in
+- **WHEN** an account authenticates successfully
+- **THEN** the prior session identifier is discarded and a new one is issued
+
+#### Scenario: Password is changed
+- **WHEN** an account changes its password
+- **THEN** every other active session for that account stops being accepted, and the current one continues
+
+#### Scenario: Signing out everywhere
+- **WHEN** an account requests that all other sessions end
+- **THEN** the system invalidates them and records the event
+
+#### Scenario: Session cookie attributes
+- **WHEN** a session cookie is issued over HTTPS
+- **THEN** it is marked secure, HTTP-only, and same-site
+
+### Requirement: Accounts can require a second factor
+The system SHALL support authenticator-app one-time codes and WebAuthn passkeys as second factors, SHALL
+issue single-use recovery codes when a second factor is first enrolled, and SHALL allow an operator to
+require a second factor for every account.
+
+#### Scenario: Enrolling an authenticator app
+- **WHEN** an account enrols an authenticator app and confirms a generated code
+- **THEN** the second factor becomes active and single-use recovery codes are issued once
+
+#### Scenario: Enrolling a passkey
+- **WHEN** an account registers a WebAuthn credential
+- **THEN** the credential becomes usable as a second factor and is listed with the date it was added
+
+#### Scenario: Signing in with a second factor active
+- **WHEN** an account with a second factor authenticates with a correct password
+- **THEN** the session is not established until the second factor is satisfied
+
+#### Scenario: Reusing a one-time code
+- **WHEN** a previously accepted authenticator code is submitted again within its validity window
+- **THEN** the system refuses it
+
+#### Scenario: Using a recovery code
+- **WHEN** an account authenticates with a recovery code
+- **THEN** the code is consumed, cannot be used again, and the account is told how many remain
+
+#### Scenario: Operator requires a second factor
+- **WHEN** an operator enables the instance-wide requirement and an account without a second factor signs in
+- **THEN** the account may only reach second-factor enrolment until it has one
+
+#### Scenario: Removing the last second factor while required
+- **WHEN** an account attempts to remove its only second factor while the instance-wide requirement is active
+- **THEN** the system refuses
+
+### Requirement: Sensitive operations require recent authentication
+The system SHALL require the acting account to have authenticated recently before it changes an email
+address or password, enrols or removes a second factor, issues an API token, or deletes a domain.
+
+#### Scenario: Sensitive action with a stale session
+- **WHEN** an account attempts a sensitive operation without having authenticated within the configured window
+- **THEN** the system requires the password again before proceeding
+
+#### Scenario: Sensitive action shortly after signing in
+- **WHEN** an account attempts a sensitive operation within the configured window
+- **THEN** the operation proceeds without a further prompt
+
+### Requirement: Issued secrets are stored only as hashes
+The system SHALL store API tokens, invitation tokens, password-reset tokens, and recovery codes as
+one-way hashes, generate them from a cryptographically secure source, and expire reset tokens on a short
+window and on first use.
+
+#### Scenario: A token is issued
+- **WHEN** any API token, invitation, reset token, or recovery code is created
+- **THEN** only its hash is persisted, and the value is displayed to the requester once
+
+#### Scenario: A reset token is reused
+- **WHEN** a password-reset token is submitted after it has already been used
+- **THEN** the system refuses it
+
+#### Scenario: Requesting a reset for an unknown address
+- **WHEN** a password reset is requested for an address with no account
+- **THEN** the response is indistinguishable from a request for an existing account
+
+### Requirement: Roles cannot be escalated by the acting account
+The system SHALL prevent an account from changing its own role and from granting a role above its own.
+
+#### Scenario: Account edits its own role
+- **WHEN** an account submits a change to its own role
+- **THEN** the system refuses
+
+#### Scenario: Granting a role above the actor's
+- **WHEN** an administrator attempts to grant the owner role
+- **THEN** the system refuses
+
 ### Requirement: Programmatic access uses scoped tokens
 The system SHALL allow accounts to issue named API tokens with explicit scopes and optional expiry, and
 SHALL show a token's value only once, at creation.

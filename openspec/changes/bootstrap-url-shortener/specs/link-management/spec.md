@@ -54,6 +54,32 @@ would cause a redirect loop or that match the operator's blocklist.
 - **WHEN** a client supplies a destination whose host matches the configured blocklist
 - **THEN** the system rejects the request
 
+### Requirement: Destinations may not point at private or infrastructure addresses
+The system SHALL reject a destination whose host is a loopback, private, link-local, carrier-grade NAT,
+multicast, or reserved address, or a cloud instance-metadata address, whether given literally or reached by
+resolving its hostname. Any server-side fetch of a destination SHALL connect only to the address that
+passed validation.
+
+#### Scenario: Literal private address
+- **WHEN** a client supplies a destination whose host is a loopback, private, link-local, carrier-grade NAT, multicast, or reserved address
+- **THEN** the system rejects the request
+
+#### Scenario: Hostname resolving to a private address
+- **WHEN** a client supplies a destination whose hostname resolves to any such address
+- **THEN** the system rejects the request
+
+#### Scenario: Cloud metadata endpoint
+- **WHEN** a client supplies a destination addressing a cloud instance-metadata service
+- **THEN** the system rejects the request
+
+#### Scenario: Address changes after validation
+- **WHEN** the system fetches a destination and the hostname now resolves to a different address
+- **THEN** the fetch connects to the validated address rather than the newly resolved one, or does not proceed
+
+#### Scenario: Non-web scheme disguised in a redirect chain
+- **WHEN** a validated destination redirects to a `javascript:`, `data:`, or `file:` target and the system follows redirects server-side
+- **THEN** the system stops following and does not fetch the target
+
 ### Requirement: Links can be constrained in time, count, and access
 The system SHALL support an optional expiry instant, an optional maximum click count, an optional
 password, and an enabled/disabled state on every link.

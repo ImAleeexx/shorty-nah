@@ -23,6 +23,8 @@ nothing here may make it impossible.
 - Runtime rebranding with no build step and no unstyled first paint.
 - One command from clean host to setup wizard.
 - Octane-safe application code by construction, not by review vigilance.
+- Security properties that hold by construction — a missing database grant, an absent inline-script
+  allowance, a token that never existed in plaintext — rather than by remembering to check.
 
 **Non-Goals:**
 
@@ -331,6 +333,71 @@ Virtuoso is required rather than nice-to-have. The raw drill-down is the one vie
 render thousands of rows, and `specs/click-analytics/` already requires server pagination — virtualization
 handles the rendered window within a page.
 
+### Security: the decisions that are cheaper now than later
+
+Most of `specs/security/` is ordinary diligence. These are the parts that constrain architecture, so they
+are settled here rather than discovered during implementation.
+
+**The setup flow needs a claim gate.** An instance is reachable the moment DNS resolves, its certificate is
+published to certificate transparency logs within seconds of issuance, and the wizard's first step creates
+the owner. Without a gate, the first stranger to find the host owns the instance. First boot therefore
+generates a high-entropy token, writes it to stdout and to a file under a host-mounted path, and the wizard
+refuses all configuration until it is presented. Proof of host access is the only credential that exists
+before an account does.
+
+*Alternative rejected:* pre-seeding the owner from `.env`. It closes the window completely, but puts a user
+credential in a file our own deployment spec restricts to infrastructure values, and makes the wizard's
+account step meaningless.
+
+**The trusted-proxy contract is load-bearing.** Behind the edge, the client address arrives in a forwarding
+header. If the application trusts that header unconditionally, anyone can spoof it — and that single
+mistake defeats redirect rate limiting *and* makes every geographic figure forgeable, which is the opposite
+of the accuracy the analytics pipeline exists to provide. The application therefore trusts forwarding
+headers only from the edge's network address, never from `*`. Trusting `*` is the common shortcut and it is
+prohibited here.
+
+**The content security policy is nonce-based from the start.** `unsafe-inline` is easy to ship and
+effectively impossible to remove later, because by then every component depends on it. The cost is real and
+worth naming: per-request nonces force dynamic rendering on any page carrying inline style or script, so
+those pages cannot be statically prerendered. For an authenticated dashboard that renders per-viewer
+branding this changes nothing — it was already dynamic. The interstitial is server-rendered by Laravel and
+emits its nonce directly.
+
+**Public identifiers are ULIDs; primary keys stay integers.** Exposing sequential keys invites enumeration
+of links, users, and invitations. Every resource therefore carries a ULID public identifier used in URLs,
+API payloads, and exports, while internal joins keep a compact integer key. Two identifiers is slightly
+more bookkeeping than one; a UUID primary key would cost index locality on the click-heavy tables instead.
+Link slugs are unaffected — they are a separate, deliberately unguessable public handle.
+
+**Unauthorized reads answer `404`, not `403`.** `403` confirms the object exists, which is itself a
+disclosure on a private instance. The distinction is only made for callers already authorized to know.
+
+**The audit log is append-only in the database, not by convention.** The application's database role holds
+no `UPDATE` or `DELETE` grant on the audit table. An application-level guard is bypassed by the next
+developer who writes a migration; a missing grant is not.
+
+**Passwords are checked against a bundled list, not an online service.** A breach-check API — even one using
+hash-prefix k-anonymity — sends a signal about our users to a third party, which contradicts the privacy
+posture the rest of this design is built on, and fails in an air-gapped install. A bundled list of the most
+commonly used passwords catches the realistic case offline.
+
+**Second factors are TOTP and WebAuthn.** TOTP covers every operator with a phone and no extra
+infrastructure. WebAuthn passkeys add phishing resistance, and are the larger commitment of the two —
+credential storage, attestation handling, and browser variation — so they are built as their own phase and
+cannot silently block the rest of the change.
+
+**Branding uploads are decoded and re-encoded.** Format is determined by decoding the file, never from its
+extension or declared content type, and the image is re-encoded to strip metadata and any embedded payload.
+SVG is refused outright rather than sanitised: it can carry script, it is served from the interface's own
+origin, and every SVG sanitiser is a bypass-of-the-month target. This requires an image-processing
+extension in the API image, which the container work must account for.
+
+**Private-address destinations are refused.** The shortener does not fetch destinations today, so this is
+partly forward-looking — but it also stops the instance being used to point a victim's browser at
+`169.254.169.254` or a host on the operator's own network. Validation resolves the hostname and checks every
+returned address, and any future server-side fetch must connect to the validated address rather than
+re-resolving, which is where rebinding gets in.
+
 ### The interstitial page is served by Laravel, self-contained
 
 The hold page is a Blade view with its CSS inlined, compiled from a small dedicated Tailwind entry in the
@@ -403,6 +470,17 @@ diff.
   reachable by incremental tweaks — double-bezel enclosures and hairline-bordered flat cards are different
   component architectures → The direction is settled here, before component work starts, precisely because
   discovering the preference later means rebuilding the shell rather than restyling it.
+- **A nonce-based policy will break a component the first time someone adds inline style.** That is the
+  policy working → The lint rules and the component set give a supported way to do it; the failure is loud
+  and immediate rather than silent.
+- **The setup token is one more thing an operator can lose.** It is printed once to a log that may have
+  rotated → It is also written to a host-mounted file and remains valid across restarts until installation
+  completes, so it is recoverable from the host without database access.
+- **WebAuthn is the largest single addition in this change** and could stall it → It is scoped as its own
+  phase, after TOTP is working, so the instance has a functioning second factor even if passkeys slip.
+- **Two identifiers per resource invites using the wrong one** — leaking an integer key in a payload
+  defeats the enumeration protection → The API serialisation layer exposes the public identifier and never
+  the key, and this is asserted in tests rather than left to review.
 - **Bounded branding will frustrate an operator who wants a look the tokens cannot express** → The bounds
   are what keep every accent choice legible and every derived state correct without hand-tuning. Widening
   them is a deliberate later decision, not an accident of an unvalidated input field.

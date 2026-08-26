@@ -8,13 +8,18 @@
 
 ## 2. Container topology
 
-- [ ] 2.1 Write the API image (PHP 8.4, FrankenPHP, required extensions, non-root user, no baked secrets) and verify `docker build` succeeds and the image runs `php -v`
+- [x] 2.1 Write the API image (PHP 8.4, FrankenPHP, required extensions, non-root user, no baked secrets) and verify `docker build` succeeds and the image runs `php -v`
 - [ ] 2.2 Write the web image as a Next.js standalone build and verify the container serves the default page
 - [ ] 2.3 Write `compose.yaml` with edge, api, worker, scheduler, web, postgres, redis, clickhouse, and geoipupdate, and verify `docker compose config` validates
 - [ ] 2.4 Write `compose.dev.yaml` with source mounts and file watching, and verify an edit to an API file is reflected without a rebuild
 - [ ] 2.5 Write the Caddyfile routing `/api/*` and reserved paths to the API, all else to web, and short domains entirely to the API, and verify each route class reaches the right upstream
 - [ ] 2.6 Add startup environment validation that exits non-zero naming any missing or malformed required value, and verify a container with an absent required value fails to start with that message
 - [ ] 2.7 Add per-service health checks including dependency reachability and queue liveness, and verify `docker compose ps` reports healthy states and reports unhealthy when a datastore is stopped
+
+- [ ] 2.8 Add an image-processing extension to the API image for branding upload re-encoding, and verify a decoded-and-re-encoded raster image round-trips inside the container
+- [ ] 2.9 Emit the hardened response headers at the edge — HSTS, referrer policy, permissions policy, `nosniff`, frame-ancestors deny — and strip server and framework version headers, and verify each header is present and no version is disclosed
+- [ ] 2.10 Keep Postgres, Redis and ClickHouse on the internal network with no published ports, and verify only the edge publishes ports
+- [ ] 2.11 Pin every base image by digest, and verify a tag-only reference fails the pipeline check
 
 ## 3. API foundation and Octane safety
 
@@ -23,6 +28,10 @@
 - [ ] 3.3 Add the ClickHouse HTTP client wrapper with batch `JSONEachRow` insert and parameterized reads, and verify its unit tests pass against a live ClickHouse service
 - [ ] 3.4 Add `clickhouse:migrate` with a version-tracking table, and verify re-running it on an up-to-date instance changes nothing and exits zero
 - [ ] 3.5 Configure Horizon with separate `clicks`, `default`, and `mail` queues, restrict its dashboard to the owner role, and verify a non-owner receives `403`
+
+- [ ] 3.6 Configure the trusted-proxy contract to the edge's network address only, and verify a forwarding header from an untrusted peer is ignored while one from the edge is honoured
+- [ ] 3.7 Add diagnostic redaction for credentials, tokens, session identifiers, link passwords and licence keys, and verify a failing request carrying a token records it redacted and returns no stack trace with debug disabled
+- [ ] 3.8 Close mass assignment by default across models, and verify an undeclared attribute such as a role or owner reference is not written
 
 ## 4. Settings store
 
@@ -39,6 +48,13 @@
 - [ ] 5.4 Implement role authorization including the member-cannot-see-others-links `404` and the last-owner protection, and verify those tests pass
 - [ ] 5.5 Add authentication rate limiting and identical responses for unknown addresses, and verify the enumeration-resistance test passes
 - [ ] 5.6 Implement scoped API tokens shown once at creation with revocation, and verify in-scope, out-of-scope, and revoked cases behave as specified
+
+- [ ] 5.7 Hash passwords with a memory-hard algorithm at a tuned cost, rehash on sign-in when the cost rises, and verify no plaintext reaches any log
+- [ ] 5.8 Enforce the password policy against length and a bundled commonly-used-password list, and verify a weak password is rejected with the requirement stated
+- [ ] 5.9 Implement session lifecycle — new identifier on authentication and privilege change, secure/HTTP-only/same-site cookies, other sessions invalidated on password change, sign-out-everywhere — and verify each case
+- [ ] 5.10 Require recent authentication for sensitive operations, and verify a stale session is challenged while a fresh one proceeds
+- [ ] 5.11 Store API tokens, invitations, reset tokens and recovery codes as hashes only, and verify a reused reset token is refused and an unknown-address reset is indistinguishable
+- [ ] 5.12 Prevent self-role changes and grants above the actor's role, and verify both are refused
 
 ## 6. Domains
 
@@ -57,6 +73,9 @@
 - [ ] 7.6 Implement model-event-driven cache invalidation keyed by `(host, slug)`, and verify an edited destination and a deleted link both take effect on the immediately following request
 - [ ] 7.7 Implement tags and link search by slug, destination, and tag with role scoping, and verify search results respect the requester's role
 - [ ] 7.8 Implement the link CRUD API with authorization, and verify the endpoint tests pass
+
+- [ ] 7.9 Add ULID public identifiers to every exposed resource while keeping integer primary keys, and verify serialised payloads never contain the primary key and that incrementing an exposed identifier resolves to nothing
+- [ ] 7.10 Reject destinations resolving to loopback, private, link-local, carrier-grade NAT, multicast, reserved or cloud-metadata addresses, and verify literal and DNS-resolved cases are both refused
 
 ## 8. Redirect hot path
 
@@ -120,6 +139,9 @@
 - [ ] 12.16 Add the `prefers-reduced-motion` variants across the component set and verify movement is removed while opacity and colour transitions that aid comprehension remain
 - [ ] 12.17 Verify the frequency gate holds in the built interface: the command palette and keyboard navigation have no open/close animation, table sort and filter do not transition rows, and no dashboard surface uses scroll-entry motion
 
+- [ ] 12.18 Plumb per-request CSP nonces through the web app and emit a policy with no inline or eval allowance, and verify an injected script without a nonce does not execute and that nonces differ between responses
+- [ ] 12.19 Determine branding upload format by decoding, refuse SVG, cap pixel dimensions before full decode, re-encode to strip metadata, and store under a generated name, and verify a renamed non-image and an oversized image are both refused
+
 ## 13. Setup experience
 
 - [ ] 13.1 Implement installation-state detection gating all routes, and verify an uninstalled instance redirects the interface to setup and returns `503` from authenticated API endpoints
@@ -129,6 +151,9 @@
 - [ ] 13.5 Implement permanent setup closure and verify the route returns `404` and submissions change nothing after installation
 - [ ] 13.6 Implement `shortynah:install` accepting the same configuration, and verify fresh success, non-zero exit on an installed instance, and non-zero exit naming a missing value
 - [ ] 13.7 Verify the full wizard with a Playwright run from fresh instance to signed-in dashboard
+
+- [ ] 13.8 Generate the setup token on first boot, emit it to the log and a host-mounted file, require it before the wizard accepts configuration, invalidate it on completion, and verify it survives a restart while uninstalled and grants nothing afterwards
+- [ ] 13.9 Restrict the connectivity step to configured dependencies, and verify a supplied host or connection string is ignored
 
 ## 14. Operator interface
 
@@ -147,6 +172,8 @@
 - [ ] 14.13 Design the empty states for links, analytics, and search with the serif heading treatment, and verify each states the next action rather than only reporting absence
 - [ ] 14.14 Verify keyboard navigation and screen-reader labelling across primary flows
 
+- [ ] 14.15 Build the audit log viewer for owners with actor, action and period filtering, and verify entries list newest first and cannot be edited or deleted from the interface
+
 ## 15. Operations
 
 - [ ] 15.1 Implement graceful worker shutdown returning unfinished jobs to the queue, and verify a job interrupted by a termination signal is completed or requeued
@@ -155,11 +182,36 @@
 - [ ] 15.4 Verify restore onto a clean host yields resolving links and available historical reports
 - [ ] 15.5 Verify a built image contains no instance credentials, keys, or licence values in its layers or environment
 
-## 16. Verification and delivery
+## 16. Authorization and audit
 
-- [ ] 16.1 Run the full quality gate — Pint, Larastan, Pest, ESLint, typecheck, Vitest, Playwright — and verify every check passes
-- [ ] 16.2 Verify every scenario in `specs/` has a corresponding automated test, and list any deliberate exceptions with a reason
-- [ ] 16.3 Verify a clean-host bring-up reaches the setup flow with no manual step between the bring-up command and the wizard
-- [ ] 16.4 Conduct a motion review over the delivered interface against the frequency gate and the implementation contract, inspecting animations at 2–5× duration, and resolve the findings
-- [ ] 16.5 Conduct a code review pass over the delivered implementation and resolve the findings
-- [ ] 16.6 Write `README.md` covering the project, its feature set, deployment, and configuration, verified by following its instructions on a clean host
+- [ ] 16.1 Implement the authorization layer so every object reference is checked against the acting identity and scope is derived server-side, and verify a client-supplied owner or domain reference is ignored
+- [ ] 16.2 Return `404` rather than `403` for unauthorized reads of existing objects, and verify the response does not distinguish a forbidden object from a missing one
+- [ ] 16.3 Create the append-only audit table and revoke `UPDATE` and `DELETE` from the application's database role, and verify the application cannot alter an entry even through a direct query
+- [ ] 16.4 Record audit entries for authentication outcomes, role changes, invitations, tokens, second-factor changes, domain changes, settings changes, link password changes, exports and installation, and verify each event produces one entry with actor, action, target, derived source and time
+- [ ] 16.5 Sweep every endpoint against the IDOR checklist in `specs/security/`, and verify each nested and cross-owner access path is covered by a test
+
+## 17. Two-factor authentication
+
+- [ ] 17.1 Implement authenticator-app enrolment with confirmation, and verify a wrong confirmation code does not activate the factor
+- [ ] 17.2 Enforce the second factor during sign-in so no session is established until it is satisfied, and verify a correct password alone grants nothing
+- [ ] 17.3 Reject replayed one-time codes within their validity window, and verify a second submission of an accepted code is refused
+- [ ] 17.4 Issue, hash and consume single-use recovery codes, and verify a used code cannot be reused and the remaining count is reported
+- [ ] 17.5 Implement WebAuthn passkey registration and authentication, and verify a registered credential authenticates and is listed with its creation date
+- [ ] 17.6 Implement the instance-wide second-factor requirement, and verify an account without one is confined to enrolment and cannot remove its only factor while the requirement is active
+
+## 18. Supply chain and release gates
+
+- [ ] 18.1 Add dependency advisory scanning for both applications to CI, failing on high or critical, and verify it fails against a deliberately vulnerable pinned dependency
+- [ ] 18.2 Add repository secret scanning to CI, and verify it fails on a planted credential-shaped string
+- [ ] 18.3 Add built-image vulnerability scanning, failing on high or critical, and verify it reports against a known-vulnerable base
+- [ ] 18.4 Add a check that every base image is digest-pinned, and verify it fails on a tag-only reference
+- [ ] 18.5 Add automated dependency update proposals, and verify a proposal opens against an outdated dependency
+
+## 19. Verification and delivery
+
+- [ ] 19.1 Run the full quality gate — Pint, Larastan, Pest, ESLint, typecheck, Vitest, Playwright — and verify every check passes
+- [ ] 19.2 Verify every scenario in `specs/` has a corresponding automated test, and list any deliberate exceptions with a reason
+- [ ] 19.3 Verify a clean-host bring-up reaches the setup flow with no manual step between the bring-up command and the wizard
+- [ ] 19.4 Conduct a motion review over the delivered interface against the frequency gate and the implementation contract, inspecting animations at 2–5× duration, and resolve the findings
+- [ ] 19.5 Conduct a code review pass over the delivered implementation and resolve the findings
+- [ ] 19.6 Write `README.md` covering the project, its feature set, deployment, and configuration, verified by following its instructions on a clean host

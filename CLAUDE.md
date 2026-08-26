@@ -234,8 +234,29 @@ are **not** the direction here.
 
 ## Security
 
-- Open-redirect protection on destinations, with an optional blocklist.
-- Per-IP rate limiting on the redirect route.
-- Link options: password, expiry, max clicks.
-- Slugs are CSPRNG base62 (default length 7) with a reserved-word blocklist — a private shortener's slugs
-  should not be enumerable. Custom slugs are validated against the same blocklist.
+Full contract in `openspec/changes/bootstrap-url-shortener/specs/security/spec.md`. Breaking one of these
+is a defect, not a style choice:
+
+- **Trusted proxies are the edge's address, never `*`.** Trusting every peer lets anyone spoof
+  `X-Forwarded-For`, which defeats redirect rate limiting *and* makes every geographic figure forgeable.
+- **No `unsafe-inline` or `unsafe-eval` in the CSP.** Inline style and script are authorised by per-request
+  nonce — which is why pages carrying inline markup render dynamically.
+- **Unauthorized reads return `404`, never `403`.** A `403` confirms the object exists.
+- **Public identifiers are ULIDs.** Integer primary keys never appear in a URL, payload, or export.
+- **The audit table has no `UPDATE`/`DELETE` grant** for the application role. Enforcement is the missing
+  grant, not a guard in code.
+- **Issued secrets are stored hashed only** — API tokens, invitations, reset tokens, recovery codes — and
+  shown once at creation.
+- **No SVG uploads.** Format is decided by decoding the file, never by extension or declared type, and
+  images are re-encoded before storage.
+- **The setup flow requires the first-boot token** until installation completes. Without it, the first
+  stranger to find the host owns the instance.
+- **Destinations resolving to loopback, private, link-local, CGNAT, multicast, reserved, or cloud-metadata
+  addresses are refused** — checked after DNS resolution, not just on the literal string.
+- **Diagnostics never carry** credentials, tokens, session identifiers, link passwords, or raw addresses.
+- Sensitive operations (email, password, second factor, API token, domain deletion) require recent
+  authentication.
+
+Product-level protections: open-redirect blocklist, per-IP redirect rate limiting, link password/expiry/max
+clicks, and CSPRNG base62 slugs (default length 7) with a reserved-word blocklist so a private instance's
+slugs are not enumerable.

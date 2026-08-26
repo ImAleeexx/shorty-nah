@@ -1,0 +1,36 @@
+# Version control and agent tooling
+.git
+.gitignore
+.github
+.agents
+.claude
+docs
+openspec
+CLAUDE.md
+Makefile
+
+# Never ship secrets or local state
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies and build output are produced inside the image
+**/node_modules
+**/vendor
+**/.next
+**/.turbo
+apps/api/frankenphp
+apps/api/database/database.sqlite
+apps/api/storage/logs/*
+apps/api/storage/framework/cache/data/*
+apps/api/storage/framework/sessions/*
+apps/api/storage/framework/views/*
+apps/api/bootstrap/cache/*
+
+# Test and tooling artefacts
+**/coverage
+**/test-results
+**/playwright-report
+**/.phpunit.result.cache
+**/.phpunit.cache
+.DS_Store
