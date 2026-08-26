@@ -1,0 +1,48 @@
+# Internal development docs — local only, never published
+/docs/
+
+# Vendored agent skills — local tooling, restored per CLAUDE.md, never published
+/.agents/
+/.claude/skills/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# PHP / Laravel
+/apps/api/vendor/
+/apps/api/storage/*.key
+/apps/api/storage/app/public/
+/apps/api/storage/framework/cache/data/*
+/apps/api/storage/framework/sessions/*
+/apps/api/storage/framework/views/*
+/apps/api/storage/logs/*
+/apps/api/bootstrap/cache/*
+/apps/api/.phpunit.result.cache
+/apps/api/.phpunit.cache/
+/apps/api/public/storage
+
+# Node / Next.js
+node_modules/
+/apps/web/.next/
+/apps/web/out/
+/apps/web/next-env.d.ts
+/apps/web/.turbo/
+/apps/web/coverage/
+/apps/web/test-results/
+/apps/web/playwright-report/
+/apps/web/tsconfig.tsbuildinfo
+
+# GeoIP databases (downloaded at runtime)
+/docker/geoip/*.mmdb
+
+# Local volumes
+/.data/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
