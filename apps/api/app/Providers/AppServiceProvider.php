@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Listeners\VerifyDependencies;
+use App\Settings\SettingsStore;
 use App\Support\TrustedProxies;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Http\Middleware\TrustProxies;
@@ -17,7 +19,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // A singleton is correct here: the store holds a connection, a cache and
+        // an encrypter, never request state. It deliberately memoises nothing,
+        // so a value written by another worker is visible immediately.
+        $this->app->singleton(SettingsStore::class, fn (Application $app): SettingsStore => new SettingsStore(
+            database: $app->make('db.connection'),
+            cache: $app->make('cache.store'),
+            encrypter: $app->make('encrypter'),
+        ));
     }
 
     /**
