@@ -2,12 +2,26 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
-it('denies the Horizon dashboard by default', function (): void {
-    // The dashboard reveals queue payloads. Until the role model can grant it to
-    // owners, no one may see it.
+it('grants the Horizon dashboard to an owner only', function (): void {
+    // The dashboard reveals queue payloads: destinations, visitor hashes, job
+    // arguments.
+    expect(Gate::forUser(User::factory()->owner()->create())->allows('viewHorizon'))->toBeTrue();
+
+    foreach (['admin', 'member', 'viewer'] as $role) {
+        expect(Gate::forUser(User::factory()->{$role}()->create())->allows('viewHorizon'))
+            ->toBeFalse("role [{$role}] should not reach Horizon");
+    }
+
     expect(Gate::forUser(null)->allows('viewHorizon'))->toBeFalse();
+});
+
+it('denies a disabled owner', function (): void {
+    $owner = User::factory()->owner()->disabled()->create();
+
+    expect(Gate::forUser($owner)->allows('viewHorizon'))->toBeFalse();
 });
 
 it('configures a supervisor per queue', function (): void {
