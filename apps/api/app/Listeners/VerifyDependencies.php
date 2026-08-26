@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace App\Listeners;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Redis;
+use App\Setup\DependencyProbe;
 use RuntimeException;
-use Throwable;
 
 /**
  * Makes the health route mean something.
@@ -17,46 +14,22 @@ use Throwable;
  * which reports healthy while the application cannot serve a single request.
  * Throwing here turns the endpoint into a readiness check the container runtime
  * can act on.
+ *
+ * The probes are shared with the setup wizard's connectivity step: readiness and
+ * "can this instance be configured" are the same question asked at two moments.
  */
 final class VerifyDependencies
 {
+    public function __construct(private readonly DependencyProbe $probe) {}
+
     public function handle(): void
     {
-        $this->check('postgres', function (): void {
-            DB::connection()->select('select 1');
-        });
-
-        $this->check('redis', function (): void {
-            Redis::connection()->ping();
-        });
-
-        $this->check('clickhouse', function (): void {
-            $host = config('clickhouse.host');
-            $port = config('clickhouse.port');
-
-            if (! is_string($host) || ! is_scalar($port)) {
-                throw new RuntimeException('ClickHouse host or port is not configured.');
+        foreach ($this->probe->all() as $status) {
+            if (! $status->healthy) {
+                // The dependency name is the actionable part; the probe's reason
+                // is already free of anything a DSN carries.
+                throw new RuntimeException("Dependency [{$status->name}] is unreachable: {$status->reason}");
             }
-
-            $response = Http::timeout(3)->get("http://{$host}:{$port}/ping");
-
-            if (! $response->successful()) {
-                throw new RuntimeException("ping returned status {$response->status()}.");
-            }
-        });
-    }
-
-    /**
-     * @param  callable(): void  $probe
-     */
-    private function check(string $dependency, callable $probe): void
-    {
-        try {
-            $probe();
-        } catch (Throwable $e) {
-            // The dependency name is the actionable part; the underlying message
-            // can carry credentials from a DSN, so it is not propagated.
-            throw new RuntimeException("Dependency [{$dependency}] is unreachable.", previous: $e);
         }
     }
 }

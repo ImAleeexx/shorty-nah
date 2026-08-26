@@ -17,11 +17,13 @@ use App\Links\DatabaseSlugAvailability;
 use App\Links\SlugAvailability;
 use App\Listeners\VerifyDependencies;
 use App\Settings\SettingsStore;
+use App\Setup\SetupToken;
 use App\Support\ConfigValue;
 use App\Support\TrustedProxies;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
@@ -80,6 +82,14 @@ class AppServiceProvider extends ServiceProvider
             key: ConfigValue::string(config('app.key'), 'APP_KEY'),
         ));
 
+        // The path is resolved once at binding time: it is deployment
+        // configuration, never request state.
+        $this->app->singleton(SetupToken::class, fn (Application $app): SetupToken => new SetupToken(
+            settings: $app->make(SettingsStore::class),
+            files: $app->make(Filesystem::class),
+            path: ConfigValue::string(config('shortynah.setup_token_path'), 'SETUP_TOKEN_PATH'),
+        ));
+
         $this->app->singleton(SettingsStore::class, fn (Application $app): SettingsStore => new SettingsStore(
             database: $app->make('db.connection'),
             cache: $app->make('cache.store'),
@@ -121,6 +131,11 @@ class AppServiceProvider extends ServiceProvider
         // visitor's own pages. A token is single-use anyway; the limit is here so
         // the endpoint cannot be hammered.
         RateLimiter::for('beacon', static fn (Request $request): Limit => Limit::perMinute(120)
+            ->by((string) $request->ip()));
+
+        // Tight: the token is high-entropy, so a legitimate operator gets it
+        // right by pasting it, and anything doing volume here is guessing.
+        RateLimiter::for('setup-token', static fn (Request $request): Limit => Limit::perMinute(10)
             ->by((string) $request->ip()));
 
         RateLimiter::for('redirect', static fn (Request $request): Limit => Limit::perMinute(240)

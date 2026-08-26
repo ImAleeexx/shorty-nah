@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\RequireInstallation;
 use App\Http\Middleware\ValidateCsrfTokenForCookieRequests;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
@@ -42,6 +44,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // request. Sanctum's variant is used rather than the framework's, because
         // auth:sanctum makes Sanctum's guard the default and the framework's
         // version calls viaRemember() on it, which a request guard has no.
+        // Before installation there are no accounts, so authenticating first
+        // would answer 401 to a problem no credential can solve. The framework
+        // sorts the stack by priority, so declaring the order on the route group
+        // alone is not enough.
+        $middleware->prependToPriorityList(
+            before: AuthenticatesRequests::class,
+            prepend: RequireInstallation::class,
+        );
+
         $middleware->api(prepend: [
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,

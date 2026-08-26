@@ -14,6 +14,12 @@ return [
     'trusted_proxies' => env('TRUSTED_PROXIES'),
 
     /*
+     * Where first boot writes the setup token. Host-mounted, because an operator
+     * recovers it from the host when the container log has already rotated.
+     */
+    'setup_token_path' => env('SETUP_TOKEN_PATH', '/var/lib/shortynah/setup/setup-token'),
+
+    /*
      * Where the geoipupdate sidecar writes its databases. Enrichment degrades to
      * non-geographic when they are absent rather than failing.
      */

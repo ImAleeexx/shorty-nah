@@ -89,4 +89,18 @@ final class RegistrationService
     {
         return $this->create($name, $email, $password, Role::Owner);
     }
+
+    /**
+     * The instance owner, if one has been created. Ordered by id so an instance
+     * that later gains a second owner still resolves to the original.
+     */
+    public function owner(): ?User
+    {
+        $owner = User::query()
+            ->where('role', Role::Owner->value)
+            ->orderBy('id')
+            ->first();
+
+        return $owner instanceof User ? $owner : null;
+    }
 }

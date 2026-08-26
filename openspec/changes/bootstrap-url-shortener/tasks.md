@@ -146,16 +146,16 @@
 
 ## 13. Setup experience
 
-- [ ] 13.1 Implement installation-state detection gating all routes, and verify an uninstalled instance redirects the interface to setup and returns `503` from authenticated API endpoints
-- [ ] 13.2 Implement the dependency connectivity step and verify an unreachable datastore names the dependency and blocks advancement
-- [ ] 13.3 Build the wizard steps for administrator, instance identity and primary domain, branding, analytics, registration mode, and mail, and verify a skipped mail step still completes installation
-- [ ] 13.4 Implement resumable progress and verify reloading mid-wizard resumes at the first incomplete step
-- [ ] 13.5 Implement permanent setup closure and verify the route returns `404` and submissions change nothing after installation
-- [ ] 13.6 Implement `shortynah:install` accepting the same configuration, and verify fresh success, non-zero exit on an installed instance, and non-zero exit naming a missing value
-- [ ] 13.7 Verify the full wizard with a Playwright run from fresh instance to signed-in dashboard
+- [x] 13.1 Implement installation-state detection gating all routes, and verify an uninstalled instance redirects the interface to setup and returns `503` from authenticated API endpoints. The gate is ordered ahead of authentication through the framework's middleware priority list, not just the route group: declaring it first on the group alone still let `auth:sanctum` answer `401` to a caller no credential could satisfy
+- [x] 13.2 Implement the dependency connectivity step and verify an unreachable datastore names the dependency and blocks advancement. The probes are shared with the health listener rather than duplicated, and failure reasons come from a fixed vocabulary because a driver's own message carries the DSN, and a DSN carries a password
+- [x] 13.3 Build the wizard steps for administrator, instance identity and primary domain, branding, analytics, registration mode, and mail, and verify a skipped mail step still completes installation. A step is refused while any predecessor is outstanding, so the finish line is unreachable without an owner account. The connectivity step reports its result and waits for the operator rather than advancing on success — the requirement is to report *and* unlock, and auto-advancing meant the check was never seen
+- [x] 13.4 Implement resumable progress and verify reloading mid-wizard resumes at the first incomplete step. Progress is recorded explicitly in the settings store rather than inferred from the data each step wrote: branding and analytics have defaults, so "has a value" cannot tell a submitted step from an untouched one
+- [x] 13.5 Implement permanent setup closure and verify the route returns `404` and submissions change nothing after installation, asserted at the API and again in the browser against the rendered page
+- [x] 13.6 Implement `shortynah:install` accepting the same configuration, and verify fresh success, non-zero exit on an installed instance, and non-zero exit naming a missing value. The missing-value case is asserted under `--no-interaction`, which is what deployment automation actually runs with and the signal the command reads
+- [x] 13.7 Verify the full wizard with a Playwright run from fresh instance to signed-in dashboard. The run reads the token from the host-mounted file rather than the log, so it exercises the recovery path the design promises. `make e2e` is now ordered — the wizard suite runs against an uninstalled instance and leaves it installed, then the fixture seeds what the rest of the suite drives. The browser run caught a real defect the API tests could not: the wizard's client performed no CSRF handshake, which only fails outside the testing environment
 
-- [ ] 13.8 Generate the setup token on first boot, emit it to the log and a host-mounted file, require it before the wizard accepts configuration, invalidate it on completion, and verify it survives a restart while uninstalled and grants nothing afterwards
-- [ ] 13.9 Restrict the connectivity step to configured dependencies, and verify a supplied host or connection string is ignored
+- [x] 13.8 Generate the setup token on first boot, emit it to the log and a host-mounted file, require it before the wizard accepts configuration, invalidate it on completion, and verify it survives a restart while uninstalled and grants nothing afterwards. Only the digest is stored; the plaintext exists in the log and the `0600` host file, which is what makes it recoverable without database access
+- [x] 13.9 Restrict the connectivity step to configured dependencies, and verify a supplied host or connection string is ignored — asserted by confirming the supplied host is never dialled, not merely that the response looked the same
 
 ## 14. Operator interface
 

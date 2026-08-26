@@ -185,3 +185,22 @@ body {
     box-shadow: 0 2px 8px oklch(0 0 0 / 0.04);
   }
 }
+
+/* The setup wizard is seen once, so it is one of the few surfaces allowed a real
+   entrance. Transform and opacity only; the reduced-motion rule above governs
+   it like everything else. */
+@keyframes setup-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.setup-step {
+  animation: setup-step-in var(--duration-sheet) var(--ease-out) both;
+}

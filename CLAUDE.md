@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Phases 1–12 of `openspec/changes/bootstrap-url-shortener` are implemented and
-committed on `feat/bootstrap-foundation`: **106 of 157 tasks**. The stack runs, a
-link redirects, clicks land in ClickHouse enriched, and reports answer from
-rollups.
+Phases 1–13 of `openspec/changes/bootstrap-url-shortener` are implemented on
+`feat/bootstrap-foundation`: **115 of 157 tasks**. The stack runs, a link
+redirects, clicks land in ClickHouse enriched, reports answer from rollups, and a
+fresh instance can be walked from first boot to a signed-in dashboard through the
+setup wizard or `shortynah:install`.
 
-Phase 13 (setup experience) is next. Nothing in phases 13–19 has been started.
+Phase 14 (operator interface) is next. Nothing in phases 14–19 has been started.
 
 Read `tasks.md` for what is done and what is not — several tasks carry a note
 explaining what was verified and what was deliberately deferred, and those notes
@@ -104,6 +105,13 @@ first — PHPStan's parser accepts constructs PHP itself rejects.
 **Pest helper functions share one global scope.** A `function foo()` in one test
 file collides with another file's, and with Pest's and Laravel's own helpers
 (`test`, `visit`, `validator`, `record` are all taken). Name them distinctively.
+
+**A browser-side write needs the CSRF handshake.** The API runs a session on
+every route, so a cookie-authenticated `POST` without an `X-XSRF-TOKEN` header is
+refused with `419`. A client must `GET /sanctum/csrf-cookie` first and echo the
+`XSRF-TOKEN` cookie back in that header — `src/lib/setup.ts` is the worked
+example. This never fails in Pest, because CSRF is inert in the testing
+environment; it fails the moment a real browser tries it.
 
 **Short domains need a dotted host.** Hostname validation requires a dot, so
 `localhost` is refused. Use `go.localhost` — browsers resolve `*.localhost` to
