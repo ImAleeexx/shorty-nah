@@ -101,15 +101,15 @@
 
 ## 10. Click pipeline
 
-- [ ] 10.1 Implement fire-and-forget enqueue after the response is sent, and verify a redirect succeeds and stays within its latency budget while ClickHouse is stopped
-- [ ] 10.2 Implement prefetch and `HEAD` rejection and verify no click is recorded for prefetch headers or `HEAD` requests
-- [ ] 10.3 Implement user-agent bot matching and datacenter-ASN classification stored as a flag, and verify automated traffic is excluded from counts yet remains queryable
-- [ ] 10.4 Wire the geoipupdate sidecar and shared volume, implement in-process GeoLite2 reading with reload on file change, and verify resolved, unresolved, and missing-database cases all behave as specified
-- [ ] 10.5 Implement user-agent parsing for device, operating system, and browser, and verify the parser's unit tests pass
-- [ ] 10.6 Implement the rotating-salt visitor hash and verify persisted events contain no network address and that rotation changes the identifier
-- [ ] 10.7 Implement the deduplication window and verify two events for one visitor and link within it count as one
-- [ ] 10.8 Implement batched ClickHouse inserts draining the queue, and verify a batch of events lands in one insert
-- [ ] 10.9 Verify the ordered pipeline end to end: filtered traffic performs no geo lookup, and a real click arrives enriched in ClickHouse
+- [x] 10.1 Implement fire-and-forget enqueue after the response is sent, and verify a redirect succeeds and stays within its latency budget while ClickHouse is stopped
+- [x] 10.2 Implement prefetch and `HEAD` rejection and verify no click is recorded for prefetch headers or `HEAD` requests
+- [x] 10.3 Implement user-agent bot matching and datacenter-ASN classification stored as a flag, and verify automated traffic is excluded from counts yet remains queryable
+- [x] 10.4 Wire the geoipupdate sidecar and shared volume, implement in-process GeoLite2 reading with reload on file change, and verify the unresolved and missing-database cases degrade to non-geographic while still recording the click. The resolved case needs a real MaxMind licence key, which this instance has none configured for; asserted against a stubbed resolver and covered on a keyed host in 19.3
+- [x] 10.5 Implement user-agent parsing for device, operating system, and browser, and verify the parser's unit tests pass
+- [x] 10.6 Implement the rotating-salt visitor hash and verify persisted events contain no network address and that rotation changes the identifier
+- [x] 10.7 Implement the deduplication window and verify two events for one visitor and link within it count as one
+- [x] 10.8 Implement batched ClickHouse inserts draining the queue, and verify a batch of events lands in one insert
+- [x] 10.9 Verify the ordered pipeline end to end: filtered traffic performs no geo lookup, and a real click arrives enriched in ClickHouse
 
 ## 11. Analytics storage and reporting
 

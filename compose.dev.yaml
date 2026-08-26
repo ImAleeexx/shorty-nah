@@ -38,6 +38,9 @@ services:
   worker:
     <<: *api-dev
 
+  clicks:
+    <<: *api-dev
+
   scheduler:
     <<: *api-dev
 
