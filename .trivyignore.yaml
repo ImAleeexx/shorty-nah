@@ -1,0 +1,24 @@
+# Accepted image findings, one at a time and with a reason.
+#
+# Nothing here is ignored because it was inconvenient. Each entry cannot be acted
+# on from this repository, and each says why and when it expires. The one
+# standing policy exclusion — kernel headers, which describe a kernel a container
+# does not run — lives in scripts/scan-images.sh, because it is about a package
+# rather than a list of identifiers that would be stale within a week.
+vulnerabilities:
+  # Go modules compiled into the FrankenPHP binary. They are fixed upstream but
+  # the newest published FrankenPHP image still carries the old versions, so
+  # there is no digest this repository could pin that resolves them. Revisited
+  # on expiry rather than forgotten.
+  - id: GHSA-r277-6w6q-xmqw
+    statement: Vendored into the FrankenPHP binary; no published image carries the fix yet.
+    expired_at: 2026-11-01
+  - id: CVE-2026-76905
+    statement: Vendored into the FrankenPHP binary; no published image carries the fix yet.
+    expired_at: 2026-11-01
+  - id: CVE-2026-77354
+    statement: Vendored into the FrankenPHP binary; no published image carries the fix yet.
+    expired_at: 2026-11-01
+  - id: GHSA-hrxh-6v49-42gf
+    statement: Vendored into the FrankenPHP binary; no published image carries the fix yet.
+    expired_at: 2026-11-01

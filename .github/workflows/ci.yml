@@ -182,5 +182,55 @@ jobs:
           docker run --rm -v "$PWD/docker/caddy/Caddyfile.dev:/f:ro" \
             caddy:2-alpine caddy validate --config /f --adapter caddyfile
 
+  supply-chain:
+    name: Supply chain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Secret scanning reads history: a credential removed in a later
+          # commit is still a leaked credential.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: apps/web
+
+      - name: Dependency advisories
+        run: ./scripts/scan-dependencies.sh
+
+      - name: Committed secrets
+        run: ./scripts/scan-secrets.sh
+
+      - name: Base images are digest-pinned
+        run: ./scripts/check-image-pins.sh
+
+      - name: Build the images to scan
+        run: |
+          docker build -f docker/api/Dockerfile --target runtime -t shortynah-api:dev .
+          docker build -f docker/web/Dockerfile --target runtime -t shortynah-web:dev .
+
+      - name: Image vulnerabilities
+        run: ./scripts/scan-images.sh
+
+      - name: Images carry no instance secrets
+        run: ./scripts/check-image-secrets.sh
+
   # The Playwright suite needs the full Compose stack (edge, API, datastores),
   # so it joins CI once the setup flow it drives exists in phase 13.

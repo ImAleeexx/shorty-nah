@@ -1,0 +1,41 @@
+# Secret scanning configuration.
+#
+# The default rule set is used as-is. What is configured here is what must NOT
+# be treated as a finding: the example environment file exists to be read, and
+# the fixtures are deliberately fake credentials that tests assert against.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Paths whose credential-shaped strings are deliberate"
+
+paths = [
+  # Never committed, and full of real credentials by design. The scanner's job
+  # is what can reach the repository; this cannot.
+  '''(^|/)\.env$''',
+
+  # Dependency and build trees. They are not this repository's content, they are
+  # enormous, and their fixtures produce findings nobody can act on.
+  '''(^|/)node_modules/''',
+  '''(^|/)vendor/''',
+  '''(^|/)\.next/''',
+  '''(^|/)storage/''',
+  '''(^|/)run/''',
+  '''(^|/)backups/''',
+  '''(^|/)test-results/''',
+  '''(^|/)playwright-report/''',
+  '''(^|/)\.git/''',
+  '''(^|/)\.pnpm-store/''',
+
+  '''\.env\.example$''',
+  # Test fixtures assert against known-fake values; a scanner flagging them
+  # would train everyone to ignore it.
+  '''apps/api/tests/''',
+  '''apps/web/e2e/''',
+  '''apps/api/database/factories/''',
+]
+
+regexes = [
+  # The application key placeholder in documentation and CI.
+  '''base64:AAAA+''',
+]

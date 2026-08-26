@@ -1,0 +1,53 @@
+# Automated dependency update proposals.
+#
+# Grouped rather than one pull request per package: a stream of single-package
+# proposals gets closed unread, which is the same as not having them. Security
+# updates are deliberately not grouped — those are meant to interrupt.
+version: 2
+
+updates:
+  - package-ecosystem: composer
+    directory: /apps/api
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      api-minor-and-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+    labels: [dependencies]
+    commit-message:
+      prefix: 'Update'
+
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      web-minor-and-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+    labels: [dependencies]
+    commit-message:
+      prefix: 'Update'
+
+  # Base images are pinned by digest, so nothing else notices when one is
+  # rebuilt. This is what turns a pin from a liability into a decision.
+  - package-ecosystem: docker
+    directories:
+      - /docker/api
+      - /docker/web
+    schedule:
+      interval: weekly
+    labels: [dependencies]
+    commit-message:
+      prefix: 'Update'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies]
+    commit-message:
+      prefix: 'Update'

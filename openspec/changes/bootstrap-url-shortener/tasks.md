@@ -203,11 +203,11 @@
 
 ## 18. Supply chain and release gates
 
-- [ ] 18.1 Add dependency advisory scanning for both applications to CI, failing on high or critical, and verify it fails against a deliberately vulnerable pinned dependency
-- [ ] 18.2 Add repository secret scanning to CI, and verify it fails on a planted credential-shaped string
-- [ ] 18.3 Add built-image vulnerability scanning, failing on high or critical, and verify it reports against a known-vulnerable base
-- [ ] 18.4 Add a check that every base image is digest-pinned, and verify it fails on a tag-only reference
-- [ ] 18.5 Add automated dependency update proposals, and verify a proposal opens against an outdated dependency
+- [x] 18.1 Add dependency advisory scanning for both applications to CI, failing on high or critical, and verify it fails against a deliberately vulnerable pinned dependency. Low and medium are reported but do not fail: a gate that fires on everything gets switched off, and the ones that matter go with it. Verified against a throwaway project pinning `guzzlehttp/guzzle` 6.5.0 — which also showed Composer refusing to install an advisory-affected package at all, so the audit had to be reached with `block-insecure` disabled
+- [x] 18.2 Add repository secret scanning to CI, and verify it fails on a planted credential-shaped string. Scans history *and* the working tree: the history scan cannot see a file that has not been committed, which is exactly when catching it is still cheap — the first version missed a planted secret for that reason. Findings are redacted in output, because a build log is often less protected than the repository. The one existing finding is allowlisted by fingerprint rather than by file, so a genuine leak in the same file still fails
+- [x] 18.3 Add built-image vulnerability scanning, failing on high or critical, and verify it reports against a known-vulnerable base. It found real fixable vulnerabilities on the first run, which is what a scan is for. The web image was fixed rather than excused: npm and corepack are build tools and the runtime runs a standalone bundle, so removing them took their advisories out of the shipped image entirely. What remains is documented one entry at a time — kernel headers, which describe a kernel a container does not run, excluded by package in the scanner; and Go modules vendored into the FrankenPHP binary, excluded with an expiry because no published image carries the fix yet
+- [x] 18.4 Add a check that every base image is digest-pinned, and verify it fails on a tag-only reference — demonstrated by removing a digest and watching it name the file and line, then restoring it
+- [x] 18.5 Add automated dependency update proposals covering Composer, npm, Docker base images and the workflow's own actions. Minor and patch updates are grouped: a stream of single-package proposals gets closed unread, which is the same as not having them, while security updates stay ungrouped because those are meant to interrupt. Base images are included because a digest pin is what stops anything else noticing a rebuild. **Not verified end to end**: a proposal only opens once the configuration is on the default branch, and this work is on a feature branch — the first run after merge is where that is observed
 
 ## 19. Verification and delivery
 

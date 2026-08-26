@@ -4,15 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Phases 1–17 of `openspec/changes/bootstrap-url-shortener` are implemented on
-`feat/bootstrap-foundation`: **146 of 157 tasks**. The stack runs, a link
+Phases 1–18 of `openspec/changes/bootstrap-url-shortener` are implemented on
+`feat/bootstrap-foundation`: **151 of 157 tasks**. The stack runs, a link
 redirects, clicks land in ClickHouse enriched, reports answer from rollups, a
 fresh instance can be walked from first boot to a signed-in dashboard, and an
 operator can sign in and manage links, analytics, settings, branding and people
 through the interface.
 
-Phase 18 (supply chain and release gates) is next, then 19 (verification and
-delivery). Both remaining phases are gates rather than features.
+Phase 19 (verification and delivery) is the last one: the Playwright suite joins
+CI, a deployed host verifies certificate issuance and geo enrichment, and the
+README lands.
+
+Supply-chain scans are `make scan` — dependencies, secrets and images. They are
+deliberately outside `make ci` because they are slow; CI runs them as their own
+job. Accepted image findings live in `.trivyignore.yaml` with a reason and, where
+they are deferrals rather than policy, an expiry.
 
 **Postgres has two roles, on purpose.** `DB_USERNAME` owns the schema and applies
 migrations; the application connects as `DB_APP_USERNAME`, which is not a
