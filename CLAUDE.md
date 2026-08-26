@@ -4,15 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Phases 1–16 of `openspec/changes/bootstrap-url-shortener` are implemented on
-`feat/bootstrap-foundation`: **140 of 157 tasks**. The stack runs, a link
+Phases 1–17 of `openspec/changes/bootstrap-url-shortener` are implemented on
+`feat/bootstrap-foundation`: **146 of 157 tasks**. The stack runs, a link
 redirects, clicks land in ClickHouse enriched, reports answer from rollups, a
 fresh instance can be walked from first boot to a signed-in dashboard, and an
 operator can sign in and manage links, analytics, settings, branding and people
 through the interface.
 
-Phase 17 (two-factor authentication) is next. Phase 14 is now complete: 14.15
-closed with the audit log it views.
+Phase 18 (supply chain and release gates) is next, then 19 (verification and
+delivery). Both remaining phases are gates rather than features.
 
 **Postgres has two roles, on purpose.** `DB_USERNAME` owns the schema and applies
 migrations; the application connects as `DB_APP_USERNAME`, which is not a

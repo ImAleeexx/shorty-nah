@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Analytics\AnalyticsReader;
 use App\Audit\AuditLog;
+use App\Auth\TwoFactor\WebAuthnService;
 use App\Branding\BrandingAssetStore;
 use App\Clicks\ClickQueue;
 use App\Clicks\ClickToken;
@@ -96,6 +97,20 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(AuditLog::class, fn (Application $app): AuditLog => new AuditLog(
             applicationKey: ConfigValue::string(config('app.key'), 'APP_KEY'),
         ));
+
+        // The relying party is the instance's own host, resolved from
+        // configuration and never from a request. That binding is what stops a
+        // credential being usable from anywhere else.
+        $this->app->singleton(WebAuthnService::class, function (Application $app): WebAuthnService {
+            $url = ConfigValue::string(config('app.url'), 'APP_URL');
+            $host = parse_url($url, PHP_URL_HOST);
+
+            return new WebAuthnService(
+                relyingPartyId: is_string($host) && $host !== '' ? $host : 'localhost',
+                relyingPartyName: (string) (config('app.name') ?? 'Shorty-Nah'),
+                origin: rtrim($url, '/'),
+            );
+        });
 
         $this->app->singleton(SettingsStore::class, fn (Application $app): SettingsStore => new SettingsStore(
             database: $app->make('db.connection'),

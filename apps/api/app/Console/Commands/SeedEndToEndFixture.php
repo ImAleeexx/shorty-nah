@@ -9,6 +9,8 @@ use App\Domains\DomainService;
 use App\Enums\Role;
 use App\Models\Domain;
 use App\Models\Link;
+use App\Models\RecoveryCode;
+use App\Models\TwoFactorCredential;
 use App\Models\User;
 use App\Settings\SettingsStore;
 use Illuminate\Console\Command;
@@ -31,6 +33,10 @@ final class SeedEndToEndFixture extends Command
     public const INTERSTITIAL_SLUG = 'e2ehold1';
 
     public const DIRECT_SLUG = 'e2edrct1';
+
+    public const PASSKEY_EMAIL = 'passkey@example.test';
+
+    public const PASSKEY_PASSWORD = 'a second quiet lantern drifts';
 
     public function handle(
         SettingsStore $settings,
@@ -68,6 +74,29 @@ final class SeedEndToEndFixture extends Command
                 'password_changed_at' => now(),
             ])->save();
         }
+
+        // The passkey suite gets its own account. Enrolling a second factor on
+        // the shared one would send every other browser test to a challenge
+        // screen, and they run in parallel.
+        $passkey = User::query()->where('email', self::PASSKEY_EMAIL)->first();
+
+        if (! $passkey instanceof User) {
+            $passkey = new User;
+            $passkey->forceFill([
+                'name' => 'Passkey operator',
+                'email' => self::PASSKEY_EMAIL,
+                'password' => self::PASSKEY_PASSWORD,
+                'role' => Role::Member->value,
+                'password_changed_at' => now(),
+            ])->save();
+        }
+
+        // Returned to having no second factor, so the suite starts from the same
+        // place however the last run ended.
+        RecoveryCode::query()->where('user_id', $passkey->id)->delete();
+        TwoFactorCredential::query()->where('user_id', $passkey->id)->delete();
+        RecoveryCode::query()->where('user_id', $owner->id)->delete();
+        TwoFactorCredential::query()->where('user_id', $owner->id)->delete();
 
         // The destination is on loopback, which destination validation refuses for
         // good reason. These rows are written directly because the fixture
