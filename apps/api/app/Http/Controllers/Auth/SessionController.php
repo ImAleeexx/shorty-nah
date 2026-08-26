@@ -76,8 +76,6 @@ final class SessionController
             RateLimiter::clear($key);
         }
 
-        $auth->rehash($user, $credentials['password']);
-
         // A correct password alone establishes nothing when a factor is
         // enrolled. The account is held in the session, which the browser
         // cannot edit, until the factor is satisfied.
@@ -89,6 +87,12 @@ final class SessionController
                 'recovery_codes_remaining' => $twoFactor->remainingRecoveryCodes($user),
             ], 202, ['Cache-Control' => 'no-store']);
         }
+
+        // Rehashed only once the sign-in has actually succeeded. Doing it before
+        // the second factor rewrites the stored hash, which AuthenticateSession
+        // compares against — so a refused attempt would sign every other live
+        // session out.
+        $auth->rehash($user, $credentials['password']);
 
         $auth->establishSession($request, $user);
 

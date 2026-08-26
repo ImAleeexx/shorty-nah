@@ -281,3 +281,26 @@ it('invalidates the setup token when installation completes', function (): void 
 
     expect(app(SettingsStore::class)->string(SettingsRegistry::SETUP_TOKEN_HASH))->toBeNull();
 });
+
+it('refuses a second administrator rather than creating a second owner', function (): void {
+    $token = setupFlowToken();
+
+    Http::fake(['*/ping' => Http::response('Ok.')]);
+    setupFlowPost('connectivity', [], $token)->assertOk();
+
+    setupFlowPost('administrator', [
+        'name' => 'Alex Owner',
+        'email' => 'owner@example.test',
+        'password' => 'a-long-enough-passphrase-42',
+    ], $token)->assertOk();
+
+    // A mistyped address resubmitted would otherwise leave a second
+    // full-privilege owner behind, and the wizard would install as the first.
+    setupFlowPost('administrator', [
+        'name' => 'Alex Typo',
+        'email' => 'typo@example.test',
+        'password' => 'a-long-enough-passphrase-42',
+    ], $token)->assertStatus(422)->assertJsonValidationErrors('email');
+
+    expect(User::query()->where('role', 'owner')->count())->toBe(1);
+});

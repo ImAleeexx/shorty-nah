@@ -106,6 +106,15 @@ final class SetupController
     ): JsonResponse {
         $this->guardOrder(SetupStep::Administrator, $progress);
 
+        // Submitting this step twice would create a second owner, and the wizard
+        // would then install as whichever came first — leaving a full-privilege
+        // account nobody meant to create.
+        if ($registration->owner() !== null) {
+            throw ValidationException::withMessages([
+                'email' => 'This instance already has an owner.',
+            ]);
+        }
+
         /** @var array{name: string, email: string, password: string} $input */
         $input = $request->validate([
             'name' => ['required', 'string', 'max:255'],

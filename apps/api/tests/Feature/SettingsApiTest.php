@@ -104,3 +104,36 @@ it('leaves a configured sensitive value alone when null is submitted', function 
 
     expect(app(SettingsStore::class)->string('mail.password'))->toBe('keep-me');
 });
+
+it('leaves a sensitive value alone when an empty one is submitted', function (): void {
+    $admin = settingsApiAdmin();
+
+    $this->actingAs($admin)
+        ->putJson('/api/v1/settings', ['settings' => ['mail.password' => 'the-smtp-secret']])
+        ->assertOk();
+
+    // An empty string reaches the controller as null, and null means "leave it
+    // alone" — the caller was never given the current value to send back. The
+    // consequence is that a sensitive setting cannot be emptied through this
+    // endpoint, only replaced.
+    $this->actingAs($admin)
+        ->putJson('/api/v1/settings', ['settings' => ['mail.password' => '']])
+        ->assertOk();
+
+    expect(app(SettingsStore::class)->string('mail.password'))->toBe('the-smtp-secret');
+});
+
+it('reports a value stored as null as unconfigured rather than configured', function (): void {
+    $settings = app(SettingsStore::class);
+
+    $settings->set('mail.password', 'the-smtp-secret');
+    // Clearing writes a NULL row rather than deleting it, so asking whether the
+    // key is present would answer "configured" forever while mail authenticates
+    // with no password at all.
+    $settings->set('mail.password', null);
+
+    $response = $this->actingAs(settingsApiAdmin())->getJson('/api/v1/settings')->assertOk();
+
+    expect($settings->has('mail.password'))->toBeFalse()
+        ->and($response->json('settings')['mail.password'])->toBeNull();
+});

@@ -12,15 +12,18 @@ cd "$(dirname "$0")/.."
 COMPOSE=(docker compose -f compose.yaml -f compose.dev.yaml)
 DIR="backups/restore-check"
 
-if [[ "${APP_ENV:-local}" == "production" ]]; then
-    printf 'Refusing to destroy a production instance.\n' >&2
-    exit 1
-fi
-
 set -a
 # shellcheck disable=SC1091
 [[ -f .env ]] && . ./.env
 set +a
+
+# Checked after .env is read, not before. APP_ENV lives in that file rather than
+# the shell, so guarding first reads the `local` default on the very host this
+# is meant to protect — and then destroys its volumes.
+if [[ "${APP_ENV:-local}" == "production" ]]; then
+    printf 'Refusing to destroy a production instance.\n' >&2
+    exit 1
+fi
 
 fail() { printf '\n%s\n' "$1" >&2; exit 1; }
 

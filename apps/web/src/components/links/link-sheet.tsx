@@ -42,16 +42,25 @@ export function LinkSheet({
       .map((tag) => tag.trim())
       .filter((tag) => tag !== '');
 
-    const body = {
+    const password = String(data.get('password') ?? '');
+
+    const body: Record<string, unknown> = {
       destination: data.get('destination'),
-      domain: data.get('domain') === '' ? null : data.get('domain'),
+      ...(editing ? {} : { domain: data.get('domain') === '' ? null : data.get('domain') }),
       slug: data.get('slug') === '' ? null : data.get('slug'),
       redirect_mode: data.get('redirect_mode') === '' ? null : data.get('redirect_mode'),
-      password: data.get('password') === '' ? null : data.get('password'),
       expires_at: data.get('expires_at') === '' ? null : data.get('expires_at'),
       max_clicks: data.get('max_clicks') === '' ? null : Number(data.get('max_clicks')),
       tags,
     };
+
+    // Omitted when blank, never sent as null. The API treats a present password
+    // key as an instruction — null means "remove the password" — so sending it
+    // on every edit would silently unprotect a link whose owner only changed its
+    // destination, which is the opposite of what the field's own hint promises.
+    if (password !== '') {
+      body.password = password;
+    }
 
     setBusy(true);
     setFailure(null);
@@ -112,12 +121,20 @@ export function LinkSheet({
           )}
         </Field>
 
-        <Field label="Domain" error={failure?.errors.domain?.[0]}>
+        <Field
+          label="Domain"
+          // A link cannot move between domains: its short URL is the promise it
+          // made, and moving it would break every copy already shared. The field
+          // is disabled rather than hidden so the current domain stays visible.
+          hint={editing ? 'A link keeps the domain it was created on.' : undefined}
+          error={failure?.errors.domain?.[0]}
+        >
           {({ id, describedBy }) => (
             <Select
               id={id}
               name="domain"
               aria-describedby={describedBy}
+              disabled={editing}
               defaultValue={domains.find((domain) => domain.host === link?.domain)?.id ?? ''}
             >
               <option value="">Primary domain</option>
