@@ -32,6 +32,8 @@ node_modules/
 /apps/web/.turbo/
 /apps/web/coverage/
 /apps/web/test-results/
+/apps/web/blob-report/
+/apps/web/.playwright/
 /apps/web/playwright-report/
 /apps/web/tsconfig.tsbuildinfo
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Clicks\ClickToken;
+use App\Clicks\InterstitialPresenter;
 use App\Enums\RedirectMode;
 use App\Links\ClickCounter;
 use App\Links\RedirectResolver;
@@ -24,6 +26,11 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
  */
 final class RedirectController
 {
+    public function __construct(
+        private readonly ClickToken $tokens,
+        private readonly InterstitialPresenter $interstitial,
+    ) {}
+
     private const PASSWORD_MAX_ATTEMPTS = 8;
 
     private const PASSWORD_DECAY_SECONDS = 300;
@@ -115,15 +122,42 @@ final class RedirectController
 
     private function interstitial(ResolvedLink $link): Response
     {
-        // The branded hold page and its beacon arrive in the next phase. Until
-        // then this mode still reaches the destination, using the same
-        // scripting-free fallback the final page keeps for visitors without
-        // JavaScript.
+        $issued = $this->tokens->issue($link->id);
+
+        // A fresh nonce per response is what lets the policy below forbid inline
+        // script and style outright instead of allowing them everywhere.
+        $nonce = base64_encode(random_bytes(16));
+
         $response = new Response(view('redirect.interstitial', [
             'destination' => $link->destination,
+            'branding' => $this->interstitial->present(),
+            'nonce' => $nonce,
+            'token' => $issued['token'],
+            'beaconUrl' => route('clicks.beacon'),
         ])->render());
 
+        $response->headers->set('Content-Security-Policy', $this->policy($nonce));
+
         return $this->withNoStore($response, $link);
+    }
+
+    /**
+     * No unsafe-inline and no unsafe-eval. The page's own style and script are
+     * authorised by nonce; anything injected without one does not run.
+     */
+    private function policy(string $nonce): string
+    {
+        return implode('; ', [
+            "default-src 'none'",
+            "style-src 'nonce-{$nonce}'",
+            "script-src 'nonce-{$nonce}'",
+            // Branding assets are served from this origin.
+            "img-src 'self' data:",
+            "connect-src 'self'",
+            "form-action 'none'",
+            "frame-ancestors 'none'",
+            "base-uri 'none'",
+        ]);
     }
 
     private function passwordPrompt(

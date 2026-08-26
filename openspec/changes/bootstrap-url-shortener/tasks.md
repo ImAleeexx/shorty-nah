@@ -92,12 +92,12 @@
 
 ## 9. Interstitial mode
 
-- [ ] 9.1 Build the self-contained Blade hold page with inlined CSS from a dedicated Tailwind entry, and verify the rendered response makes no additional network requests
-- [ ] 9.2 Implement the HMAC-signed single-use click token and verify a forged or replayed beacon submission is rejected
-- [ ] 9.3 Implement the beacon collecting viewport, screen, timezone, language, colour-scheme, connection type, and dwell time, and verify the signals are attached to the click event
-- [ ] 9.4 Implement the scripting-disabled fallback via meta refresh and a visible link, and verify the visitor reaches the destination with server-observable data only
-- [ ] 9.5 Apply the configured per-link referrer policy on navigation and verify the emitted policy matches the setting
-- [ ] 9.6 Verify with a Playwright test that the hold page brands correctly, navigates after the configured delay, and records exactly one click
+- [x] 9.1 Build the self-contained Blade hold page with hand-inlined CSS, and verify the rendered response makes no additional network requests. A dedicated Tailwind entry was rejected: it would put a Node toolchain in the production API image to emit ~2KB of CSS, and branding's runtime custom properties already share the tokens (recorded in design.md)
+- [x] 9.2 Implement the HMAC-signed single-use click token and verify a forged or replayed beacon submission is rejected
+- [x] 9.3 Implement the beacon collecting viewport, screen, timezone, language, colour-scheme, connection type, and dwell time, and verify the signals are recorded against the click identifier with out-of-range values refused. Attachment to the persisted event happens where events exist, in 10.3
+- [x] 9.4 Implement the scripting-disabled fallback via meta refresh and a visible link, and verify the visitor reaches the destination with server-observable data only
+- [x] 9.5 Apply the configured per-link referrer policy on navigation and verify the emitted policy matches the setting
+- [x] 9.6 Verify with a Playwright test that the hold page brands correctly, navigates after the configured delay, and records exactly one click
 
 ## 10. Click pipeline
 

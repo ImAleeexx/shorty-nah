@@ -411,9 +411,14 @@ re-resolving, which is where rebinding gets in.
 
 ### The interstitial page is served by Laravel, self-contained
 
-The hold page is a Blade view with its CSS inlined, compiled from a small dedicated Tailwind entry in the
-API image. It is one HTTP response with no additional requests, on the same domain the visitor already
-resolved.
+The hold page is a Blade view with its CSS inlined by hand. It is one HTTP response with no additional
+requests, on the same domain the visitor already resolved.
+
+An earlier draft had this CSS compiled from a dedicated Tailwind entry inside the API image. That is
+rejected for the same reason Node was kept out of that image for file watching: it would put a JavaScript
+toolchain in the production API image to emit roughly two kilobytes of CSS. The shared-token benefit is
+delivered by branding's CSS custom properties regardless — those are runtime values, not build-time ones —
+so Tailwind would add a build coupling and buy nothing.
 
 Routing it through Next.js would add a network hop and a second render path to the most
 latency-sensitive page a visitor ever sees. Branding comes from the same Redis-cached settings, so the
