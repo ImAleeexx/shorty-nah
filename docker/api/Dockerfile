@@ -1,9 +1,11 @@
 # syntax=docker/dockerfile:1
 
 # ---------- Composer dependencies ----------
-FROM dunglas/frankenphp:1-php8.4 AS vendor
+FROM dunglas/frankenphp:1-php8.4@sha256:9a5a469b5b49252ca8fd2cc67d2c90df34ba35e40097fd675c5735a4850bed0e AS vendor
 
-RUN install-php-extensions @composer intl zip
+# The vendor stage needs the extensions the lock file's platform requirements
+# name, or composer refuses the install. Horizon asks for pcntl and posix.
+RUN install-php-extensions @composer intl zip pcntl posix
 
 WORKDIR /app
 
@@ -29,12 +31,13 @@ RUN composer dump-autoload \
         --no-scripts
 
 # ---------- Runtime ----------
-FROM dunglas/frankenphp:1-php8.4 AS runtime
+FROM dunglas/frankenphp:1-php8.4@sha256:9a5a469b5b49252ca8fd2cc67d2c90df34ba35e40097fd675c5735a4850bed0e AS runtime
 
 # pcntl is required by Octane, maxminddb makes in-process geo lookups cheap
 # enough to run inside the enrichment job.
 RUN install-php-extensions \
         bcmath \
+        gd \
         intl \
         maxminddb \
         opcache \
@@ -44,7 +47,7 @@ RUN install-php-extensions \
         sockets \
         zip \
     && apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl procps \
     && rm -rf /var/lib/apt/lists/*
 
 COPY docker/api/php.ini /usr/local/etc/php/conf.d/shortynah.ini
@@ -53,7 +56,9 @@ WORKDIR /app
 
 ENV OCTANE_SERVER=frankenphp \
     APP_ENV=production \
-    APP_DEBUG=false
+    APP_DEBUG=false \
+    XDG_DATA_HOME=/var/lib/shortynah \
+    XDG_CONFIG_HOME=/var/lib/shortynah/config
 
 COPY --from=vendor /app ./
 
@@ -65,6 +70,8 @@ RUN chmod +x /usr/local/bin/entrypoint
 # The edge terminates TLS, so this process binds an unprivileged port and never
 # needs root.
 RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin shortynah \
+    && mkdir -p /var/lib/shortynah/config \
+    && chown -R shortynah:shortynah /var/lib/shortynah \
     && mkdir -p storage/framework/cache/data \
                 storage/framework/sessions \
                 storage/framework/views \
@@ -82,3 +89,22 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=40s --retries=4 \
 
 ENTRYPOINT ["entrypoint"]
 CMD ["octane"]
+
+# ---------- Development ----------
+# Octane's --watch spawns a Node file watcher. Node and chokidar live only in
+# this stage so the production image carries neither.
+FROM runtime AS development
+
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g chokidar@4 \
+    && npm cache clean --force
+
+# Octane's watch script resolves chokidar from NODE_PATH, which keeps it out of
+# the bind-mounted application tree.
+ENV NODE_PATH=/usr/local/lib/node_modules
+
+USER shortynah

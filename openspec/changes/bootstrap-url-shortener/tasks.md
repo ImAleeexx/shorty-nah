@@ -10,16 +10,16 @@
 
 - [x] 2.1 Write the API image (PHP 8.4, FrankenPHP, required extensions, non-root user, no baked secrets) and verify `docker build` succeeds and the image runs `php -v`
 - [ ] 2.2 Write the web image as a Next.js standalone build and verify the container serves the default page
-- [ ] 2.3 Write `compose.yaml` with edge, api, worker, scheduler, web, postgres, redis, clickhouse, and geoipupdate, and verify `docker compose config` validates
-- [ ] 2.4 Write `compose.dev.yaml` with source mounts and file watching, and verify an edit to an API file is reflected without a rebuild
-- [ ] 2.5 Write the Caddyfile routing `/api/*` and reserved paths to the API, all else to web, and short domains entirely to the API, and verify each route class reaches the right upstream
-- [ ] 2.6 Add startup environment validation that exits non-zero naming any missing or malformed required value, and verify a container with an absent required value fails to start with that message
-- [ ] 2.7 Add per-service health checks including dependency reachability and queue liveness, and verify `docker compose ps` reports healthy states and reports unhealthy when a datastore is stopped
+- [x] 2.3 Write `compose.yaml` with edge, api, worker, scheduler, web, postgres, redis, clickhouse, and geoipupdate, and verify `docker compose config` validates
+- [x] 2.4 Write `compose.dev.yaml` with source mounts and file watching, and verify an edit to an API file is reflected without a rebuild (FrankenPHP does not honour `--max-requests` for worker recycling, so dev uses a `development` image stage carrying Node and chokidar for Octane's `--watch`)
+- [x] 2.5 Write the Caddyfile routing `/api/*` and reserved paths to the API, all else to web, and short domains entirely to the API, and verify each route class reaches the right upstream
+- [x] 2.6 Add startup environment validation that exits non-zero naming any missing or malformed required value, and verify a container with an absent required value fails to start with that message
+- [x] 2.7 Add per-service health checks including dependency reachability and queue liveness, and verify `docker compose ps` reports healthy states and that stopping a datastore makes `/up` return 500 and the probe fail (the container flips to unhealthy after the configured 4 consecutive failures, which is deliberate anti-flap behaviour rather than an instant transition)
 
-- [ ] 2.8 Add an image-processing extension to the API image for branding upload re-encoding, and verify a decoded-and-re-encoded raster image round-trips inside the container
-- [ ] 2.9 Emit the hardened response headers at the edge — HSTS, referrer policy, permissions policy, `nosniff`, frame-ancestors deny — and strip server and framework version headers, and verify each header is present and no version is disclosed
-- [ ] 2.10 Keep Postgres, Redis and ClickHouse on the internal network with no published ports, and verify only the edge publishes ports
-- [ ] 2.11 Pin every base image by digest, and verify a tag-only reference fails the pipeline check
+- [x] 2.8 Add an image-processing extension to the API image for branding upload re-encoding, and verify a decoded-and-re-encoded raster image round-trips inside the container
+- [x] 2.9 Emit the hardened response headers at the edge — HSTS, referrer policy, permissions policy, `nosniff`, frame-ancestors deny — and strip server and framework version headers, and verify each header is present and no version is disclosed
+- [x] 2.10 Keep Postgres, Redis and ClickHouse on the internal network with no published ports, and verify only the edge publishes ports
+- [x] 2.11 Pin every base image by digest, and verify a tag-only reference fails the pipeline check
 
 ## 3. API foundation and Octane safety
 

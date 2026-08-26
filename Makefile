@@ -11,7 +11,7 @@ API_RUN      := $(COMPOSE) run --rm --no-deps api
 WEB          := $(COMPOSE) exec web
 
 .PHONY: help up down restart logs ps setup build sh tinker migrate fresh ch-migrate \
-        test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci \
+        test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins \
         queue-status backup
 
 help: ## List available targets
@@ -70,6 +70,12 @@ ch-migrate: ## Apply the ClickHouse event schema
 backup: ## Back up application data, event data and uploaded assets
 	$(API) php artisan shortynah:backup
 
+## --- Local tooling ---
+
+install: ## Install host-side dependencies for both apps
+	cd apps/api && composer install
+	cd apps/web && pnpm install --frozen-lockfile --ignore-scripts
+
 ## --- Quality ---
 
 test: test-api test-web ## Run every test suite
@@ -101,4 +107,7 @@ analyse: ## Run Larastan static analysis
 typecheck: ## Typecheck the web app
 	$(WEB) pnpm typecheck
 
-ci: lint analyse typecheck test ## Run the full quality gate
+check-pins: ## Verify every base image is digest-pinned
+	./scripts/check-image-pins.sh
+
+ci: lint analyse typecheck test check-pins ## Run the full quality gate

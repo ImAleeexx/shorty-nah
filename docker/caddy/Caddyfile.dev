@@ -1,0 +1,37 @@
+{
+	admin off
+
+	# No ACME locally: certificates would need public DNS, and the dev stack is
+	# reached over plain HTTP on a high port.
+	auto_https off
+}
+
+(hardening) {
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		X-Frame-Options "DENY"
+		-Server
+		-X-Powered-By
+
+		# Strict transport security is deliberately absent here. Sending it over
+		# HTTP would pin localhost to HTTPS in the developer's browser.
+	}
+}
+
+:80 {
+	import hardening
+
+	# Bare paths are listed alongside their subtrees: a /horizon/* matcher
+	# alone does not match /horizon itself.
+	@api path /api/* /horizon /horizon/* /storage /storage/* /up
+	handle @api {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
