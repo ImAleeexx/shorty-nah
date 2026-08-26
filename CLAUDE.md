@@ -4,15 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Phases 1–14 of `openspec/changes/bootstrap-url-shortener` are implemented on
-`feat/bootstrap-foundation`: **129 of 157 tasks**. The stack runs, a link
+Phases 1–15 of `openspec/changes/bootstrap-url-shortener` are implemented on
+`feat/bootstrap-foundation`: **134 of 157 tasks**. The stack runs, a link
 redirects, clicks land in ClickHouse enriched, reports answer from rollups, a
 fresh instance can be walked from first boot to a signed-in dashboard, and an
 operator can sign in and manage links, analytics, settings, branding and people
 through the interface.
 
-Phase 15 (operations) is next. One task of phase 14 is deliberately open: 14.15,
-the audit log viewer, is blocked on the audit log itself, which is phase 16.
+Phase 16 (authorization and audit) is next. One task of phase 14 is deliberately
+open: 14.15, the audit log viewer, is blocked on the audit log itself, which
+phase 16 builds — it closes there.
+
+Operations checks live in `scripts/` and are wired into `make`: `check-secrets`
+and `verify-schema` run in `make ci`; `verify-shutdown` and `verify-restore` need
+a running stack and are run on demand. `verify-restore` is destructive by design —
+it removes every volume, because anything short of that is not a restore test.
 
 **The interface is server-first with client islands** — a page's initial data is
 fetched by a server component forwarding the session cookie, and everything an
