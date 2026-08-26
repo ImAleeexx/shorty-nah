@@ -258,5 +258,7 @@ is a defect, not a style choice:
   authentication.
 
 Product-level protections: open-redirect blocklist, per-IP redirect rate limiting, link password/expiry/max
-clicks, and CSPRNG base62 slugs (default length 7) with a reserved-word blocklist so a private instance's
-slugs are not enumerable.
+clicks, and CSPRNG-generated slugs over an unambiguous 58-character alphabet (letters and digits minus `0`, `O`,
+`I`, `l`; default length 7) with a reserved-word blocklist. Operator-chosen slugs use a wider URL-safe set
+(letters, digits, hyphen, underscore) — the unambiguous set is for values nobody picked and everyone must
+transcribe, and would otherwise reject every word containing an `l`.

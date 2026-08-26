@@ -114,6 +114,10 @@ final class SettingsRegistry
             ),
             new Setting('redirect.interstitial_delay_ms', SettingType::Integer, 1200),
 
+            // --- Links ---
+            new Setting('slug.length', SettingType::Integer, 7),
+            new Setting('link.destination_blocklist', SettingType::String),
+
             // --- Analytics. Operational knobs, deliberately not exposed. ---
             new Setting('analytics.retention_days', SettingType::Integer, 365),
             new Setting('analytics.bot_filtering', SettingType::Boolean, true),

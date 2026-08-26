@@ -65,18 +65,18 @@
 
 ## 7. Link management
 
-- [ ] 7.1 Implement the link model and Postgres migrations with slug uniqueness scoped per domain, and verify the same-slug-on-two-domains scenario passes
-- [ ] 7.2 Implement CSPRNG base62 slug generation with bounded retry and a distinct exhaustion error, and verify collision and exhaustion tests pass
-- [ ] 7.3 Implement custom slug validation against charset and reserved words, and verify reserved and malformed slugs are rejected
-- [ ] 7.4 Implement destination validation covering scheme, self-referencing loops, and the blocklist, and verify each rejection is tested
-- [ ] 7.5 Implement expiry, click limit, password hashing, disabled state, and per-link redirect mode with instance-default fallback, and verify the default-change scenario passes
-- [ ] 7.6 Implement model-event-driven cache invalidation keyed by `(host, slug)`, and verify an edited destination and a deleted link both take effect on the immediately following request
-- [ ] 7.7 Implement tags and link search by slug, destination, and tag with role scoping, and verify search results respect the requester's role
-- [ ] 7.8 Implement the link CRUD API with authorization, and verify the endpoint tests pass
+- [x] 7.1 Implement the link model and Postgres migrations with slug uniqueness scoped per domain, and verify the same-slug-on-two-domains scenario passes
+- [x] 7.2 Implement CSPRNG base62 slug generation with bounded retry and a distinct exhaustion error, and verify collision and exhaustion tests pass
+- [x] 7.3 Implement custom slug validation against charset and reserved words, and verify reserved and malformed slugs are rejected
+- [x] 7.4 Implement destination validation covering scheme, self-referencing loops, and the blocklist, and verify each rejection is tested
+- [x] 7.5 Implement expiry, click limit, password hashing, disabled state, and per-link redirect mode with instance-default fallback, and verify the default-change scenario passes
+- [x] 7.6 Implement model-event-driven cache invalidation keyed by `(host, slug)`, verified at the cache layer: create, destination edit, slug change (both old and new keys) and delete each evict the entry. The HTTP-level assertion that the next request observes it belongs to the redirect route and is covered in 8.2 and 8.6
+- [x] 7.7 Implement tags and link search by slug, destination, and tag with role scoping, and verify search results respect the requester's role
+- [x] 7.8 Implement the link CRUD API with authorization, and verify the endpoint tests pass
 
-- [ ] 7.9 Add ULID public identifiers to every exposed resource while keeping integer primary keys, and verify serialised payloads never contain the primary key and that incrementing an exposed identifier resolves to nothing
-- [ ] 7.10 Reject destinations resolving to loopback, private, link-local, carrier-grade NAT, multicast, reserved or cloud-metadata addresses, and verify literal and DNS-resolved cases are both refused
-- [ ] 7.11 Verify the domain deletion guard from 6.1 now that links exist: deleting a domain holding links is refused unless deletion is confirmed, and the refusal reports how many links are affected
+- [x] 7.9 Add ULID public identifiers to every exposed resource while keeping integer primary keys, and verify serialised payloads never contain the primary key and that incrementing an exposed identifier resolves to nothing
+- [x] 7.10 Reject destinations resolving to loopback, private, link-local, carrier-grade NAT, multicast, reserved or cloud-metadata addresses, and verify literal and DNS-resolved cases are both refused
+- [x] 7.11 Verify the domain deletion guard from 6.1 now that links exist: deleting a domain holding links is refused unless deletion is confirmed, and the refusal reports how many links are affected
 
 ## 8. Redirect hot path
 

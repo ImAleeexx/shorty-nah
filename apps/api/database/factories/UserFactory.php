@@ -37,6 +37,8 @@ final class UserFactory extends Factory
             'role' => Role::Member->value,
             'password' => self::$password ??= Hash::make(self::PASSWORD),
             'password_changed_at' => now(),
+            'last_authenticated_at' => null,
+            'disabled_at' => null,
             'remember_token' => Str::random(10),
         ];
     }

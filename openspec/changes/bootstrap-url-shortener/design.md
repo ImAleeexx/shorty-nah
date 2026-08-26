@@ -181,11 +181,22 @@ maintenance we would not control.
 
 ### Slugs are random, not derived
 
-Slugs come from a CSPRNG over a 62-character alphabet, default length 7, with bounded retry on collision
-and a reserved-word blocklist covering application paths.
+Slugs come from a CSPRNG over a 58-character alphabet — the digits and letters minus `0`, `O`, `I` and
+`l` — at a default length of 7, with bounded retry on collision and a reserved-word blocklist covering
+application paths.
+
+The exclusions are the point, and they resolve a contradiction between an earlier draft of this document
+and `specs/link-management/`, which requires an *unambiguous* alphabet. A slug is an identifier a person
+reads off a screen, types into a phone, or reads aloud; base62 keeps every character pair that gets
+transcribed wrong. The mono typeface helps, but removing the ambiguity beats rendering it more clearly.
+
+**Operator-chosen slugs use a different, wider set**: letters, digits, hyphen and underscore. The
+unambiguous alphabet is right for a value nobody picked and everyone has to transcribe; applying it to
+custom slugs would reject `launch`, `blog` and every other word containing an `l`, which is useless. An
+operator asking for a specific word knows what they typed. Two sets, two jobs.
 
 A private shortener leaks information if its slugs are guessable: sequential or hash-derived slugs let
-anyone walk the corpus. Seven random base62 characters is roughly 3.5×10¹² values — collisions are
+anyone walk the corpus. Seven random characters from 58 is roughly 2.2×10¹² values — collisions are
 negligible at realistic volume, and enumeration is impractical against a rate-limited endpoint.
 
 *Alternative rejected:* Sqids or Hashids over a sequential id. Shorter, reversible, and enumerable —

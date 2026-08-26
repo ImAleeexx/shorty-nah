@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SessionController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\LinkController;
 use App\Http\Controllers\PublicConfigurationController;
 use App\Http\Controllers\TlsAuthorizationController;
 use App\Http\Controllers\UserController;
@@ -38,6 +39,12 @@ Route::prefix('v1')->group(function (): void {
 
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
+
+        Route::get('/links', [LinkController::class, 'index'])->name('links.index');
+        Route::get('/links/{link}', [LinkController::class, 'show'])->name('links.show');
+        Route::post('/links', [LinkController::class, 'store'])->name('links.store');
+        Route::patch('/links/{link}', [LinkController::class, 'update'])->name('links.update');
+        Route::delete('/links/{link}', [LinkController::class, 'destroy'])->name('links.destroy');
 
         Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
 

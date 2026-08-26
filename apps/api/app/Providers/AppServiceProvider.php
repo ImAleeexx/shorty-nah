@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Domains\DnsResolver;
 use App\Domains\SystemDnsResolver;
+use App\Links\DatabaseSlugAvailability;
+use App\Links\SlugAvailability;
 use App\Listeners\VerifyDependencies;
 use App\Settings\SettingsStore;
 use App\Support\TrustedProxies;
@@ -30,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
         // Resolution is swapped for a fake in tests; DNS in a suite is neither
         // deterministic nor fast.
         $this->app->bind(DnsResolver::class, SystemDnsResolver::class);
+        $this->app->bind(SlugAvailability::class, DatabaseSlugAvailability::class);
 
         $this->app->singleton(SettingsStore::class, fn (Application $app): SettingsStore => new SettingsStore(
             database: $app->make('db.connection'),
