@@ -1,0 +1,40 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "ignoreFiles": ["**/node_modules/**", ".next/**", ".pnpm-store/**"],
+  "rules": {
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": [
+          "theme",
+          "utility",
+          "variant",
+          "custom-variant",
+          "apply",
+          "source",
+          "plugin"
+        ]
+      }
+    ],
+    "custom-property-pattern": null,
+    "declaration-property-value-no-unknown": null,
+    "function-no-unknown": null,
+    "declaration-property-value-disallowed-list": {
+      "transition": [
+        "/^all/",
+        "/\\ball\\b/",
+        "/\\b(width|height|top|left|right|bottom|margin|padding)\\b/"
+      ],
+      "transition-property": ["all", "/\\b(width|height|top|left|right|bottom|margin|padding)\\b/"],
+      "transition-timing-function": ["/cubic-bezier\\(/", "/(^|\\s)ease-in($|\\s)/"],
+      "animation-timing-function": ["/cubic-bezier\\(/", "/(^|\\s)ease-in($|\\s)/"],
+      "transform": ["/scale\\(0(\\.0+)?\\)/"]
+    },
+    "lightness-notation": null,
+    "hue-degree-notation": null,
+    "alpha-value-notation": null,
+    "custom-property-empty-line-before": null,
+    "import-notation": null,
+    "value-keyword-case": null
+  }
+}

@@ -100,8 +100,9 @@ lint-syntax: ## Verify every PHP file compiles
 lint-api: lint-syntax ## Check PHP syntax and formatting
 	$(API_RUN) ./vendor/bin/pint --test
 
-lint-web: ## Lint the web app
+lint-web: ## Lint the web app and its stylesheets
 	$(WEB) pnpm lint
+	$(WEB) pnpm lint:css
 
 format: ## Apply PHP and web formatting
 	$(API_RUN) ./vendor/bin/pint

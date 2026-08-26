@@ -7,6 +7,7 @@ use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SessionController;
+use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\ClickBeaconController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\InvitationController;
@@ -58,6 +59,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/links/{link}/events', [AnalyticsController::class, 'events'])->name('links.events');
         Route::get('/links/{link}/export', [AnalyticsController::class, 'export'])->name('links.export');
 
+        Route::get('/branding', [BrandingController::class, 'show'])->name('branding.show');
+
         Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
 
         Route::get('/invitations', [InvitationController::class, 'index'])->name('invitations.index');
@@ -74,6 +77,9 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/invitations', [InvitationController::class, 'store'])->name('invitations.store');
             Route::delete('/invitations/{invitation}', [InvitationController::class, 'destroy'])
                 ->name('invitations.destroy');
+
+            Route::put('/branding', [BrandingController::class, 'update'])->name('branding.update');
+            Route::post('/branding/assets', [BrandingController::class, 'upload'])->name('branding.upload');
 
             Route::post('/domains', [DomainController::class, 'store'])->name('domains.store');
             Route::post('/domains/{domain}/verify', [DomainController::class, 'verify'])->name('domains.verify');
