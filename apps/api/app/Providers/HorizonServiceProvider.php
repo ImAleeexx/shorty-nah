@@ -25,12 +25,13 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
      *
      * This gate determines who can access Horizon in non-local environments.
      */
+    /**
+     * Horizon exposes queue payloads, so the dashboard is closed to everyone
+     * until the role model exists and can grant it to owners. Denying by default
+     * is the correct state to fail into.
+     */
     protected function gate(): void
     {
-        Gate::define('viewHorizon', function ($user = null) {
-            return in_array(optional($user)->email, [
-                //
-            ]);
-        });
+        Gate::define('viewHorizon', static fn (mixed $user = null): bool => false);
     }
 }

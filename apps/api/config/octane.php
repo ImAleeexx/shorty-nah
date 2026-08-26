@@ -135,7 +135,12 @@ return [
     ],
 
     'flush' => [
-        //
+        /*
+         * Bindings listed here are discarded after every request. Anything that
+         * holds request state and cannot be bound with `scoped` belongs here —
+         * a singleton that survives the request boundary serves one visitor's
+         * data to the next.
+         */
     ],
 
     /*

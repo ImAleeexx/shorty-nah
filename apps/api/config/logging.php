@@ -1,5 +1,6 @@
 <?php
 
+use App\Logging\RedactSensitiveContext;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -59,6 +60,7 @@ return [
         ],
 
         'single' => [
+            'tap' => [RedactSensitiveContext::class],
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
@@ -66,6 +68,7 @@ return [
         ],
 
         'daily' => [
+            'tap' => [RedactSensitiveContext::class],
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
@@ -103,6 +106,7 @@ return [
         ],
 
         'stderr' => [
+            'tap' => [RedactSensitiveContext::class],
             'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),
             'handler' => StreamHandler::class,

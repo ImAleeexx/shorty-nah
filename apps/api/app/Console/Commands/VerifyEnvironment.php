@@ -28,6 +28,7 @@ final class VerifyEnvironment extends Command
         'app.key' => 'APP_KEY',
         'app.url' => 'APP_URL',
         'shortynah.domain' => 'APP_DOMAIN',
+        'shortynah.trusted_proxies' => 'TRUSTED_PROXIES',
         'database.connections.pgsql.host' => 'DB_HOST',
         'database.connections.pgsql.database' => 'DB_DATABASE',
         'database.connections.pgsql.username' => 'DB_USERNAME',
@@ -70,6 +71,12 @@ final class VerifyEnvironment extends Command
             if ($value !== null && filter_var($value, FILTER_VALIDATE_URL) === false) {
                 $failures[] = "{$variable} must be an absolute URL, got \"{$value}\".";
             }
+        }
+
+        $proxies = $this->stringValue('shortynah.trusted_proxies');
+
+        if ($proxies !== null && in_array(trim($proxies), ['*', '**'], true)) {
+            $failures[] = 'TRUSTED_PROXIES must name the edge network, not a wildcard: a trusted wildcard lets any client spoof its address.';
         }
 
         foreach (self::PORTS as $key => $variable) {
