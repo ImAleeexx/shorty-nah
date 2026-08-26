@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Auth;
 use App\Audit\AuditAction;
 use App\Audit\AuditLog;
 use App\Auth\AuthenticationService;
+use App\Auth\TwoFactor\PendingChallenge;
+use App\Auth\TwoFactor\TwoFactorService;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,8 +26,13 @@ final class SessionController
 
     private const DECAY_SECONDS = 300;
 
-    public function store(Request $request, AuthenticationService $auth, AuditLog $audit): JsonResponse
-    {
+    public function store(
+        Request $request,
+        AuthenticationService $auth,
+        AuditLog $audit,
+        TwoFactorService $twoFactor,
+        PendingChallenge $challenge,
+    ): JsonResponse {
         /** @var array{email: string, password: string} $credentials */
         $credentials = $request->validate([
             'email' => ['required', 'string', 'email', 'max:255'],
@@ -43,7 +50,7 @@ final class SessionController
             }
         }
 
-        $user = $auth->attempt($request, $credentials['email'], $credentials['password']);
+        $user = $auth->verifyCredentials($credentials['email'], $credentials['password']);
 
         if ($user === null) {
             foreach ($this->limiterKeys($request, $credentials['email']) as $key) {
@@ -68,6 +75,22 @@ final class SessionController
         foreach ($this->limiterKeys($request, $credentials['email']) as $key) {
             RateLimiter::clear($key);
         }
+
+        $auth->rehash($user, $credentials['password']);
+
+        // A correct password alone establishes nothing when a factor is
+        // enrolled. The account is held in the session, which the browser
+        // cannot edit, until the factor is satisfied.
+        if ($twoFactor->enrolled($user)) {
+            $challenge->begin($request, $user);
+
+            return new JsonResponse([
+                'two_factor_required' => true,
+                'recovery_codes_remaining' => $twoFactor->remainingRecoveryCodes($user),
+            ], 202, ['Cache-Control' => 'no-store']);
+        }
+
+        $auth->establishSession($request, $user);
 
         $audit->record(AuditAction::SignInSucceeded, actor: $user, request: $request);
 

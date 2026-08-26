@@ -28,7 +28,32 @@ final class AuthenticationService
 
     public function __construct(private readonly Hasher $hasher) {}
 
+    /**
+     * Check credentials and sign in.
+     *
+     * Only correct for accounts with no second factor. Where one is enrolled the
+     * caller must use verifyCredentials() and withhold the session until the
+     * factor is satisfied — a session established first is a session that
+     * already grants everything.
+     */
     public function attempt(Request $request, string $email, string $password): ?User
+    {
+        $user = $this->verifyCredentials($email, $password);
+
+        if ($user === null) {
+            return null;
+        }
+
+        $this->rehashIfNeeded($user, $password);
+        $this->establishSession($request, $user);
+
+        return $user;
+    }
+
+    /**
+     * Credentials only. Establishes nothing.
+     */
+    public function verifyCredentials(string $email, string $password): ?User
     {
         $user = User::query()->where('email', mb_strtolower($email))->first();
 
@@ -48,10 +73,16 @@ final class AuthenticationService
             return null;
         }
 
-        $this->rehashIfNeeded($user, $password);
-        $this->establishSession($request, $user);
-
         return $user;
+    }
+
+    /**
+     * Applied once the sign-in is going to succeed, so an account that fails a
+     * second factor is not silently rehashed by a rejected attempt.
+     */
+    public function rehash(User $user, string $password): void
+    {
+        $this->rehashIfNeeded($user, $password);
     }
 
     /**

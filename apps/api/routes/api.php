@@ -8,6 +8,7 @@ use App\Http\Controllers\AuditController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SessionController;
+use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\ClickBeaconController;
 use App\Http\Controllers\DomainController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Middleware\EnsureSetupIsOpen;
 use App\Http\Middleware\RequireInstallation;
 use App\Http\Middleware\RequireRecentAuthentication;
+use App\Http\Middleware\RequireSecondFactor;
 use App\Http\Middleware\RequireSetupToken;
 use Illuminate\Support\Facades\Route;
 
@@ -67,64 +69,95 @@ Route::prefix('v1')->group(function (): void {
     Route::post('/auth/session', [SessionController::class, 'store'])->name('auth.session.store');
     Route::post('/auth/register', [RegistrationController::class, 'store'])->name('auth.register');
 
+    // Unauthenticated by necessity: there is no session yet, which is the whole
+    // point. The pending account lives in the session, not in the request.
+    Route::post('/auth/two-factor/challenge', [TwoFactorController::class, 'challenge'])
+        ->name('auth.two-factor.challenge');
+    Route::post('/auth/two-factor/challenge/passkey', [TwoFactorController::class, 'passkeyChallengeOptions'])
+        ->name('auth.two-factor.challenge.passkey');
+
     Route::middleware([RequireInstallation::class, 'auth:sanctum'])->group(function (): void {
         Route::get('/auth/user', [SessionController::class, 'show'])->name('auth.user');
+        Route::get('/auth/two-factor', [TwoFactorController::class, 'index'])->name('auth.two-factor.index');
         Route::delete('/auth/session', [SessionController::class, 'destroy'])->name('auth.session.destroy');
         Route::post('/auth/sessions/others', [PasswordController::class, 'destroyOtherSessions'])
             ->name('auth.sessions.others');
 
-        Route::get('/users', [UserController::class, 'index'])->name('users.index');
-        Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
-
-        Route::get('/links', [LinkController::class, 'index'])->name('links.index');
-        Route::get('/links/{link}', [LinkController::class, 'show'])->name('links.show');
-        Route::post('/links', [LinkController::class, 'store'])->name('links.store');
-        Route::patch('/links/{link}', [LinkController::class, 'update'])->name('links.update');
-        Route::delete('/links/{link}', [LinkController::class, 'destroy'])->name('links.destroy');
-
-        Route::get('/links/{link}/report', [AnalyticsController::class, 'report'])->name('links.report');
-        Route::get('/links/{link}/events', [AnalyticsController::class, 'events'])->name('links.events');
-        Route::get('/links/{link}/export', [AnalyticsController::class, 'export'])->name('links.export');
-
-        Route::get('/branding', [BrandingController::class, 'show'])->name('branding.show');
-
-        // Not behind recent authentication: the security contract enumerates the
-        // operations that require it — email, password, second factor, API token
-        // and domain deletion — and instance configuration is not one of them.
-        // Read-only, owner-only, and newest first. There is no write route here
-        // and the application's database role holds no privilege to add one.
-        Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
-
-        Route::get('/settings', [SettingsController::class, 'show'])->name('settings.show');
-        Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
-
-        Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
-
-        Route::get('/invitations', [InvitationController::class, 'index'])->name('invitations.index');
-        Route::get('/tokens', [ApiTokenController::class, 'index'])->name('tokens.index');
-
-        // Operations that change credentials, membership or long-lived access
-        // require the account to have authenticated recently.
+        // Enrolling a second factor still needs recent authentication, but it
+        // must sit above the requirement below: an account confined to
+        // enrolment has to be able to reach it.
         Route::middleware(RequireRecentAuthentication::class)->group(function (): void {
-            Route::put('/auth/password', [PasswordController::class, 'update'])->name('auth.password.update');
+            Route::post('/auth/two-factor', [TwoFactorController::class, 'store'])
+                ->name('auth.two-factor.store');
+            Route::post('/auth/two-factor/{credential}/confirm', [TwoFactorController::class, 'confirm'])
+                ->name('auth.two-factor.confirm');
+            Route::delete('/auth/two-factor/{credential}', [TwoFactorController::class, 'destroy'])
+                ->name('auth.two-factor.destroy');
 
-            Route::post('/tokens', [ApiTokenController::class, 'store'])->name('tokens.store');
-            Route::delete('/tokens/{token}', [ApiTokenController::class, 'destroy'])->name('tokens.destroy');
+            Route::post('/auth/two-factor/passkey/options', [TwoFactorController::class, 'passkeyOptions'])
+                ->name('auth.two-factor.passkey.options');
+            Route::post('/auth/two-factor/passkey', [TwoFactorController::class, 'passkeyStore'])
+                ->name('auth.two-factor.passkey.store');
+        });
 
-            Route::post('/invitations', [InvitationController::class, 'store'])->name('invitations.store');
-            Route::delete('/invitations/{invitation}', [InvitationController::class, 'destroy'])
-                ->name('invitations.destroy');
+        // Everything past this point needs the second factor the instance
+        // requires. Enrolment, sign-out and reading your own account stay
+        // reachable above it, or the requirement would be a locked door with the
+        // key behind it.
+        Route::middleware(RequireSecondFactor::class)->group(function (): void {
+            Route::get('/users', [UserController::class, 'index'])->name('users.index');
+            Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 
-            Route::put('/branding', [BrandingController::class, 'update'])->name('branding.update');
-            Route::post('/branding/assets', [BrandingController::class, 'upload'])->name('branding.upload');
+            Route::get('/links', [LinkController::class, 'index'])->name('links.index');
+            Route::get('/links/{link}', [LinkController::class, 'show'])->name('links.show');
+            Route::post('/links', [LinkController::class, 'store'])->name('links.store');
+            Route::patch('/links/{link}', [LinkController::class, 'update'])->name('links.update');
+            Route::delete('/links/{link}', [LinkController::class, 'destroy'])->name('links.destroy');
 
-            Route::post('/domains', [DomainController::class, 'store'])->name('domains.store');
-            Route::post('/domains/{domain}/verify', [DomainController::class, 'verify'])->name('domains.verify');
-            Route::post('/domains/{domain}/promote', [DomainController::class, 'promote'])->name('domains.promote');
-            Route::delete('/domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
+            Route::get('/links/{link}/report', [AnalyticsController::class, 'report'])->name('links.report');
+            Route::get('/links/{link}/events', [AnalyticsController::class, 'events'])->name('links.events');
+            Route::get('/links/{link}/export', [AnalyticsController::class, 'export'])->name('links.export');
 
-            Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');
-            Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+            Route::get('/branding', [BrandingController::class, 'show'])->name('branding.show');
+
+            // Not behind recent authentication: the security contract enumerates the
+            // operations that require it — email, password, second factor, API token
+            // and domain deletion — and instance configuration is not one of them.
+            // Read-only, owner-only, and newest first. There is no write route here
+            // and the application's database role holds no privilege to add one.
+            Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+
+            Route::get('/settings', [SettingsController::class, 'show'])->name('settings.show');
+            Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+
+            Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
+
+            Route::get('/invitations', [InvitationController::class, 'index'])->name('invitations.index');
+            Route::get('/tokens', [ApiTokenController::class, 'index'])->name('tokens.index');
+
+            // Operations that change credentials, membership or long-lived access
+            // require the account to have authenticated recently.
+            Route::middleware(RequireRecentAuthentication::class)->group(function (): void {
+                Route::put('/auth/password', [PasswordController::class, 'update'])->name('auth.password.update');
+
+                Route::post('/tokens', [ApiTokenController::class, 'store'])->name('tokens.store');
+                Route::delete('/tokens/{token}', [ApiTokenController::class, 'destroy'])->name('tokens.destroy');
+
+                Route::post('/invitations', [InvitationController::class, 'store'])->name('invitations.store');
+                Route::delete('/invitations/{invitation}', [InvitationController::class, 'destroy'])
+                    ->name('invitations.destroy');
+
+                Route::put('/branding', [BrandingController::class, 'update'])->name('branding.update');
+                Route::post('/branding/assets', [BrandingController::class, 'upload'])->name('branding.upload');
+
+                Route::post('/domains', [DomainController::class, 'store'])->name('domains.store');
+                Route::post('/domains/{domain}/verify', [DomainController::class, 'verify'])->name('domains.verify');
+                Route::post('/domains/{domain}/promote', [DomainController::class, 'promote'])->name('domains.promote');
+                Route::delete('/domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
+
+                Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');
+                Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+            });
         });
     });
 });
