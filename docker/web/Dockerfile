@@ -44,6 +44,17 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
+# npm and corepack are build tools, and this stage runs `node server.js` from a
+# standalone bundle. Removing them takes their bundled dependencies — and the
+# advisories that follow those dependencies — out of the shipped image entirely,
+# which is a fix rather than an exception.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm \
+           /usr/local/bin/npx \
+           /usr/local/bin/corepack \
+           /opt/yarn-*
+
 # The standalone bundle carries its own traced node_modules, so neither pnpm nor
 # the source tree is present at runtime.
 COPY --from=build /app/.next/standalone ./

@@ -12,7 +12,7 @@ WEB          := $(COMPOSE) exec web
 
 .PHONY: help up down restart logs ps setup build sh tinker migrate fresh ch-migrate setup-token token-dir \
         test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins lint-syntax e2e-fixture \
-        queue-status backup restore e2e-setup e2e-setup-fixture check-secrets verify-schema verify-audit verify-shutdown verify-restore
+        queue-status backup restore e2e-setup e2e-setup-fixture check-secrets verify-schema verify-audit verify-shutdown verify-restore scan scan-dependencies scan-secrets scan-images
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -151,6 +151,19 @@ verify-schema: ## Verify schema is applied before anything serves traffic
 
 verify-audit: ## Verify the audit log cannot be rewritten by the application
 	./scripts/verify-audit-immutability.sh
+
+## --- Supply chain (slow; run before a release, and in CI) ---
+
+scan: scan-dependencies scan-secrets scan-images ## Run every supply-chain scan
+
+scan-dependencies: ## Fail on a high or critical dependency advisory
+	./scripts/scan-dependencies.sh
+
+scan-secrets: ## Fail on a credential-shaped string in history or the tree
+	./scripts/scan-secrets.sh
+
+scan-images: ## Fail on a fixable high or critical image vulnerability
+	./scripts/scan-images.sh
 
 ## --- Operations checks (need a running stack) ---
 
