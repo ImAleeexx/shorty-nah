@@ -88,6 +88,13 @@ jobs:
             exit 1
           fi
 
+      - name: Syntax
+        # Runs before anything else: a file that will not compile makes every
+        # later step's result meaningless, and the test runner reports nothing
+        # at all when it happens.
+        working-directory: .
+        run: ./scripts/lint-php-syntax.sh
+
       - name: Formatting
         run: ./vendor/bin/pint --test
 

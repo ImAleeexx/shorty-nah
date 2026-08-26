@@ -10,6 +10,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -18,6 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function (): void {
+            // Loaded last and with no middleware group: the redirect path needs
+            // neither a session nor a CSRF token, and every named application
+            // route is registered before a slug can shadow it.
+            Route::middleware([])->group(base_path('routes/redirect.php'));
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // The trusted-proxy list is applied in AppServiceProvider instead: this

@@ -11,7 +11,7 @@ API_RUN      := $(COMPOSE) run --rm --no-deps api
 WEB          := $(COMPOSE) exec web
 
 .PHONY: help up down restart logs ps setup build sh tinker migrate fresh ch-migrate \
-        test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins \
+        test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins lint-syntax \
         queue-status backup
 
 help: ## List available targets
@@ -91,7 +91,10 @@ e2e: ## Run the Playwright suite
 
 lint: lint-api lint-web ## Run every linter
 
-lint-api: ## Check PHP formatting
+lint-syntax: ## Verify every PHP file compiles
+	./scripts/lint-php-syntax.sh
+
+lint-api: lint-syntax ## Check PHP syntax and formatting
 	$(API_RUN) ./vendor/bin/pint --test
 
 lint-web: ## Lint the web app
