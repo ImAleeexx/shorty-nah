@@ -59,9 +59,19 @@ final class SettingsStore
         return (int) $this->get($key);
     }
 
+    /**
+     * Whether a value has actually been set.
+     *
+     * A cleared setting is stored as a NULL row rather than deleted, so the key
+     * being present is not the question. Getting this wrong makes a sensitive
+     * setting report itself configured forever after being emptied — mail would
+     * authenticate with no password while the interface said otherwise.
+     */
     public function has(string $key): bool
     {
-        return array_key_exists($key, $this->stored());
+        $stored = $this->stored();
+
+        return array_key_exists($key, $stored) && $stored[$key] !== null;
     }
 
     public function set(string $key, string|bool|int|null $value): void

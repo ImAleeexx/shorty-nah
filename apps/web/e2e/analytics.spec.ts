@@ -17,6 +17,15 @@ async function openReport(page: import('@playwright/test').Page) {
   await page.goto(`${APP}/links`);
   await page.getByTestId('report-e2edrct1').click();
   await expect(page.getByRole('heading', { name: /e2edrct1/ })).toBeVisible();
+
+  // The report renders an empty state when nothing has been counted, and every
+  // assertion below is about the populated one. Naming that here turns a
+  // missing fixture into a clear failure rather than a confusing missing
+  // locator further down.
+  await expect(
+    page.getByTestId('stat-counted'),
+    'the report has no click data; run make e2e-fixture',
+  ).toBeVisible();
 }
 
 test.describe('analytics', () => {

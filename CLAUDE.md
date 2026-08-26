@@ -4,16 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Phases 1–18 of `openspec/changes/bootstrap-url-shortener` are implemented on
-`feat/bootstrap-foundation`: **151 of 157 tasks**. The stack runs, a link
+All nineteen phases of `openspec/changes/bootstrap-url-shortener` are
+implemented on `feat/bootstrap-foundation`: **156 of 157 tasks**. The stack runs, a link
 redirects, clicks land in ClickHouse enriched, reports answer from rollups, a
 fresh instance can be walked from first boot to a signed-in dashboard, and an
 operator can sign in and manage links, analytics, settings, branding and people
 through the interface.
 
-Phase 19 (verification and delivery) is the last one: the Playwright suite joins
-CI, a deployed host verifies certificate issuance and geo enrichment, and the
-README lands.
+One task is open and cannot be closed from here: **19.4**, the motion review. The
+`review-animations` skill this repository vendors for it refuses to run from an
+agent and is reserved for `/review-animations`, and replicating its workflow by
+other means is prohibited.
+
+`verification.md` maps all 192 spec scenarios to what proves them, and names the
+three that need a deployed host with public DNS or a MaxMind key.
 
 Supply-chain scans are `make scan` — dependencies, secrets and images. They are
 deliberately outside `make ci` because they are slow; CI runs them as their own

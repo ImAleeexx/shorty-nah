@@ -10,9 +10,9 @@ API          := $(COMPOSE) exec api
 API_RUN      := $(COMPOSE) run --rm --no-deps api
 WEB          := $(COMPOSE) exec web
 
-.PHONY: help up down restart logs ps setup build sh tinker migrate fresh ch-migrate setup-token token-dir \
+.PHONY: help up down restart logs ps setup build sh tinker migrate fresh ch-migrate setup-token token-dir bootstrap-app-role \
         test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins lint-syntax e2e-fixture \
-        queue-status backup restore e2e-setup e2e-setup-fixture check-secrets verify-schema verify-audit verify-shutdown verify-restore scan scan-dependencies scan-secrets scan-images
+        queue-status backup restore e2e-setup e2e-setup-fixture check-secrets check-ports verify-schema verify-audit verify-shutdown verify-restore verify-clean-host scan scan-dependencies scan-secrets scan-images
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -23,10 +23,12 @@ help: ## List available targets
 up: token-dir ## Start the stack with the dev override applied
 	$(COMPOSE) up -d
 
-# The setup token is written by the api container's own user, so the bind mount
-# has to be writable by it. The token file itself is created 0600.
+# The setup token is written by the api container's own user, whose uid does not
+# match the host's, so the bind mount has to be writable by it. Sticky, not
+# plain 0777: another local account can create files here but cannot unlink or
+# replace the token, and whoever holds that token owns the instance.
 token-dir:
-	@mkdir -p run && chmod 0777 run
+	@mkdir -p run && chmod 1777 run
 
 down: ## Stop the stack and remove its containers
 	$(COMPOSE) down
@@ -57,6 +59,11 @@ sh: ## Shell into the api container
 
 setup-token: ## Show the first-boot setup token
 	$(API) php artisan shortynah:setup-token
+
+# The Postgres init script only runs on an empty data directory, so an instance
+# that predates the two-role split has no application role and nothing starts.
+bootstrap-app-role: ## Create the application's database role on an existing volume
+	./scripts/bootstrap-app-role.sh
 
 tinker: ## Open a Laravel REPL
 	$(API) php artisan tinker
@@ -146,6 +153,9 @@ check-pins: ## Verify every base image is digest-pinned
 check-secrets: ## Verify no instance credentials are baked into an image
 	./scripts/check-image-secrets.sh
 
+check-ports: ## Verify only the edge publishes a port in production
+	./scripts/check-published-ports.sh
+
 verify-schema: ## Verify schema is applied before anything serves traffic
 	./scripts/verify-schema-ordering.sh
 
@@ -173,4 +183,7 @@ verify-shutdown: ## Verify a worker finishes or requeues its job on termination
 verify-restore: ## Destroy this instance and prove the backup restores it
 	./scripts/verify-restore.sh
 
-ci: lint analyse typecheck test check-pins check-secrets verify-schema verify-audit ## Run the full quality gate
+verify-clean-host: ## Destroy everything and prove one command reaches the wizard
+	./scripts/verify-clean-host.sh
+
+ci: lint analyse typecheck test check-pins check-secrets check-ports verify-schema verify-audit ## Run the full quality gate

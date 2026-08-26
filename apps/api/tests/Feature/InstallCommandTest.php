@@ -92,3 +92,19 @@ it('refuses an out-of-bounds radius and changes nothing', function (): void {
     expect(User::query()->count())->toBe(0)
         ->and(app(SettingsStore::class)->installed())->toBeFalse();
 });
+
+it('leaves nothing behind when the domain is refused', function (): void {
+    $options = installCommandOptions();
+    $options['--domain'] = 'nodot';
+
+    $this->artisan('shortynah:install', $options)->assertFailed();
+
+    // The owner must not survive a failed install, or the corrected re-run
+    // fails on a unique email and the instance cannot be installed at all.
+    expect(User::query()->count())->toBe(0)
+        ->and(app(SettingsStore::class)->installed())->toBeFalse();
+
+    $this->artisan('shortynah:install', installCommandOptions())->assertSuccessful();
+
+    expect(User::query()->count())->toBe(1);
+});

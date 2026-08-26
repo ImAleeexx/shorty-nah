@@ -66,14 +66,25 @@ for image in "${IMAGES[@]}"; do
     fi
 
     # 3. This instance's real values, anywhere in the layers or the history.
-    if (( ${#secrets[@]} > 0 )); then
+    if (( ${#secrets[@]} == 0 )); then
+        # Said out loud rather than passed over. With no values to look for, the
+        # only checks that ran were the environment and the dotfile — and a run
+        # that reports success without saying so reads as a full scan.
+        printf '  no local credentials to search layers for; environment and dotfile only
+'
+    else
         history=$(docker history --no-trunc --format '{{.CreatedBy}}' "$image" 2>/dev/null || true)
 
         # Saved once to disk rather than held in a shell variable: an image is
         # gigabytes, and buffering it kills the process rather than failing the
         # check honestly.
         archive=$(mktemp)
-        docker save "$image" > "$archive" 2>/dev/null || true
+        if ! docker save "$image" > "$archive" 2>/dev/null; then
+            printf '  could not export %s to scan its layers\n' "$image" >&2
+            rm -f "$archive"
+            violations=$((violations + 1))
+            continue
+        fi
 
         for pair in "${secrets[@]}"; do
             name="${pair%%=*}"

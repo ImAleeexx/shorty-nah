@@ -4,6 +4,12 @@ const APP = 'http://localhost:8080';
 
 const OPERATOR = { email: 'e2e@example.test', password: 'a quiet lantern drifts' };
 
+// Unique per run. A deleted link keeps its slug reserved — deliberately, so old
+// traffic cannot be redirected somewhere new by whoever claims it next — which
+// means a fixed slug makes this spec pass exactly once per database.
+const MADE = `made${Date.now().toString().slice(-8)}`;
+const GUARDED = `grd${Date.now().toString().slice(-8)}`;
+
 async function signIn(page: import('@playwright/test').Page) {
   await page.goto(`${APP}/sign-in`);
   await page.getByLabel('Email').fill(OPERATOR.email);
@@ -60,22 +66,22 @@ test.describe('link management', () => {
 
     await page.getByTestId('new-link').click();
     await page.getByLabel('Destination').fill('https://example.com/from-the-browser');
-    await page.getByLabel('Custom slug').fill('browsermade');
+    await page.getByLabel('Custom slug').fill(MADE);
     await page.getByTestId('save-link').click();
 
-    await expect(page.locator('[data-slug="browsermade"]')).toBeVisible();
+    await expect(page.locator(`[data-slug="${MADE}"]`)).toBeVisible();
   });
 
   test('edits the link it just created', async ({ page }) => {
     await signIn(page);
     await page.goto(`${APP}/links`);
 
-    await page.getByTestId('edit-browsermade').click();
+    await page.getByTestId(`edit-${MADE}`).click();
     await page.getByLabel('Destination').fill('https://example.com/edited');
     await page.getByTestId('save-link').click();
 
     await expect(
-      page.locator('[data-slug="browsermade"]').getByText('https://example.com/edited'),
+      page.locator(`[data-slug="${MADE}"]`).getByText('https://example.com/edited'),
     ).toBeVisible();
   });
 
@@ -84,10 +90,38 @@ test.describe('link management', () => {
     await page.goto(`${APP}/links`);
 
     await page
-      .locator('[data-slug="browsermade"]')
+      .locator(`[data-slug="${MADE}"]`)
       .getByRole('button', { name: /Delete/ })
       .click();
 
-    await expect(page.locator('[data-slug="browsermade"]')).toHaveCount(0);
+    await expect(page.locator(`[data-slug="${MADE}"]`)).toHaveCount(0);
   });
+});
+
+test('editing a protected link without retyping the password keeps it protected', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto(`${APP}/links`);
+
+  await page.getByTestId('new-link').click();
+  await page.getByLabel('Destination').fill('https://example.com/guarded');
+  await page.getByLabel('Custom slug').fill(GUARDED);
+  await page.getByRole('dialog').getByLabel('Password', { exact: true }).fill('a-shared-secret');
+  await page.getByTestId('save-link').click();
+
+  const row = page.locator(`[data-slug="${GUARDED}"]`);
+  await expect(row).toContainText('password');
+
+  // Change only the destination, leaving the password box empty exactly as its
+  // hint instructs. The link must stay protected.
+  await page.getByTestId(`edit-${GUARDED}`).click();
+  await page.getByLabel('Destination').fill('https://example.com/still-guarded');
+  await page.getByTestId('save-link').click();
+
+  await expect(row).toContainText('https://example.com/still-guarded');
+  await expect(row).toContainText('password');
+
+  await row.getByRole('button', { name: /Delete/ }).click();
+  await expect(page.locator(`[data-slug="${GUARDED}"]`)).toHaveCount(0);
 });

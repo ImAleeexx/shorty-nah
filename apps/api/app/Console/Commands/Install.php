@@ -10,6 +10,7 @@ use App\Auth\RegistrationService;
 use App\Branding\BrandingBounds;
 use App\Domains\DomainException;
 use App\Domains\DomainService;
+use App\Models\User;
 use App\Rules\StrongPassword;
 use App\Settings\SettingsRegistry;
 use App\Settings\SettingsStore;
@@ -19,6 +20,7 @@ use App\Setup\SetupStep;
 use App\Setup\SetupToken;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -113,14 +115,25 @@ final class Install extends Command
             return self::FAILURE;
         }
 
-        $owner = $registration->createOwner($values['admin-name'], $values['admin-email'], $values['admin-password']);
-
-        $settings->set('instance.name', $values['instance-name']);
-
+        // One transaction. Without it a rejected domain leaves the owner account
+        // behind, and the corrected re-run then fails on a unique email while
+        // reporting that nothing was changed — which is false, and leaves the
+        // instance needing manual surgery to install at all.
         try {
-            $domains->register($values['domain']);
+            $owner = DB::transaction(function () use ($registration, $domains, $settings, $values): User {
+                $created = $registration->createOwner(
+                    $values['admin-name'],
+                    $values['admin-email'],
+                    $values['admin-password'],
+                );
+
+                $settings->set('instance.name', $values['instance-name']);
+                $domains->register($values['domain']);
+
+                return $created;
+            });
         } catch (DomainException $e) {
-            $this->components->error($e->getMessage());
+            $this->components->error($e->getMessage().' Nothing was changed.');
 
             return self::FAILURE;
         }

@@ -82,9 +82,23 @@ jobs:
 
       - name: Fail if any ClickHouse test skipped
         run: |
-          ./vendor/bin/pest --filter=ClickHouse --log-junit /tmp/ch.xml > /dev/null 2>&1 || true
+          rm -f /tmp/ch.xml
+          # The exit status is deliberately not swallowed, and the report's
+          # absence is treated as failure: a PHP compile error makes Pest emit
+          # no JUnit file at all, which would otherwise make this gate pass in
+          # exactly the case it exists for.
+          ./vendor/bin/pest --filter=ClickHouse --log-junit /tmp/ch.xml
+          if [ ! -f /tmp/ch.xml ]; then
+            echo "Pest produced no report; it did not run." >&2
+            exit 1
+          fi
           if grep -q '<skipped' /tmp/ch.xml; then
             echo "ClickHouse tests skipped; the service was not reachable." >&2
+            exit 1
+          fi
+          # A filter that matches nothing is not proof that anything ran.
+          if ! grep -qE 'tests="[1-9]' /tmp/ch.xml; then
+            echo "The ClickHouse filter matched no tests." >&2
             exit 1
           fi
 
@@ -174,6 +188,9 @@ jobs:
           CLICKHOUSE_READ_USERNAME: r
           CLICKHOUSE_READ_PASSWORD: ci
 
+      - name: Only the edge publishes a port
+        run: ./scripts/check-published-ports.sh
+
       - name: Caddy configuration is valid
         run: |
           docker run --rm -v "$PWD/docker/caddy/Caddyfile:/f:ro" \
@@ -232,5 +249,74 @@ jobs:
       - name: Images carry no instance secrets
         run: ./scripts/check-image-secrets.sh
 
-  # The Playwright suite needs the full Compose stack (edge, API, datastores),
-  # so it joins CI once the setup flow it drives exists in phase 13.
+  browser:
+    name: Browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: apps/web
+
+      - name: Install the browser
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: apps/web
+
+      # The suite drives the real stack through the edge, so the environment is
+      # the dev one: plain HTTP on 8080, because ACME needs public DNS.
+      - name: Write the environment
+        run: |
+          cp .env.example .env
+          {
+            echo "APP_ENV=local"
+            echo "APP_DEBUG=true"
+            echo "APP_KEY=base64:$(head -c 32 /dev/urandom | base64)"
+            echo "APP_URL=http://localhost:8080"
+            echo "APP_DOMAIN=localhost"
+            echo "NEXT_PUBLIC_APP_URL=http://localhost:8080"
+            echo "HTTP_PORT=8080"
+            echo "HTTPS_PORT=8443"
+            echo "CADDY_ACME_EMAIL=ci@example.test"
+            echo "DB_PASSWORD=$(head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+            echo "DB_APP_PASSWORD=$(head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+            echo "REDIS_PASSWORD=$(head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+            echo "CLICKHOUSE_WRITE_PASSWORD=$(head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+            echo "CLICKHOUSE_READ_PASSWORD=$(head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+            echo "BACKUP_KEY=$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+          } >> .env
+
+      - name: Bring the stack up
+        run: |
+          make up
+          # The api container reports healthy only once it answers, so this
+          # waits on the thing the suite actually needs.
+          for _ in $(seq 1 60); do
+            state=$(docker inspect --format '{{.State.Health.Status}}' shortynah-api-1 2>/dev/null || echo starting)
+            [ "$state" = "healthy" ] && break
+            sleep 5
+          done
+          docker compose -f compose.yaml -f compose.dev.yaml ps
+
+      - name: Browser suite
+        run: make e2e
+
+      - name: Stack logs on failure
+        if: failure()
+        run: docker compose -f compose.yaml -f compose.dev.yaml logs --tail=120
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7

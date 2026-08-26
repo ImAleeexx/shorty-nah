@@ -52,20 +52,37 @@ for artefact in postgres.sql.enc clickhouse.native.enc assets.tar.enc; do
 done
 
 printf 'Application data...\n'
+# ON_ERROR_STOP, or psql reports each failed statement and still exits 0 — which
+# would leave a half-written database while this script prints success, the one
+# thing its ordering above exists to prevent.
 "${COMPOSE[@]}" exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
-    psql --quiet -U "$DB_USERNAME" -d "$DB_DATABASE" < "$STAGE/postgres.sql" >/dev/null
+    psql --quiet -v ON_ERROR_STOP=1 -U "$DB_USERNAME" -d "$DB_DATABASE" < "$STAGE/postgres.sql" >/dev/null
 
 printf 'Click events...\n'
 # Truncated first so a restore is a replacement rather than a merge, and the
 # materialized rollups rebuild from the inserted rows.
-"${COMPOSE[@]}" exec -T clickhouse \
-    clickhouse-client --user "$CLICKHOUSE_WRITE_USERNAME" --password "$CLICKHOUSE_WRITE_PASSWORD" \
-    -d "$CLICKHOUSE_DATABASE" --query "TRUNCATE TABLE click_events"
+# The rollups are separate persistent tables fed by materialized views, so they
+# are not emptied by truncating the events they were built from. Leaving them
+# would double every reported figure when the re-INSERT fires the views again on
+# top of what is already there — and dashboards read rollups, so the raw events
+# would look perfectly fine.
+for table in click_events click_hourly click_by_country click_by_referrer click_by_client; do
+    "${COMPOSE[@]}" exec -T clickhouse \
+        clickhouse-client --user "$CLICKHOUSE_WRITE_USERNAME" --password "$CLICKHOUSE_WRITE_PASSWORD" \
+        -d "$CLICKHOUSE_DATABASE" --query "TRUNCATE TABLE IF EXISTS ${table}"
+done
 
-"${COMPOSE[@]}" exec -T clickhouse \
-    clickhouse-client --user "$CLICKHOUSE_WRITE_USERNAME" --password "$CLICKHOUSE_WRITE_PASSWORD" \
-    -d "$CLICKHOUSE_DATABASE" --query "INSERT INTO click_events FORMAT Native" \
-    < "$STAGE/clickhouse.native"
+# An instance that has never been clicked backs up an empty event store, and
+# ClickHouse refuses an INSERT with nothing in it. Restoring a fresh instance is
+# the ordinary case, not an error.
+if [[ -s "$STAGE/clickhouse.native" ]]; then
+    "${COMPOSE[@]}" exec -T clickhouse \
+        clickhouse-client --user "$CLICKHOUSE_WRITE_USERNAME" --password "$CLICKHOUSE_WRITE_PASSWORD" \
+        -d "$CLICKHOUSE_DATABASE" --query "INSERT INTO click_events FORMAT Native" \
+        < "$STAGE/clickhouse.native"
+else
+    printf '  the backup holds no click events\n'
+fi
 
 printf 'Uploaded assets...\n'
 "${COMPOSE[@]}" exec -T api tar -xf - -C /app/storage/app/public < "$STAGE/assets.tar"

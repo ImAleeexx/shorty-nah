@@ -22,8 +22,23 @@ test.describe('audit log', () => {
     const rows = page.getByTestId('audit-row');
     await expect(rows).not.toHaveCount(0);
 
-    // The sign-in that opened this page is the most recent thing that happened.
-    await expect(rows.first()).toHaveAttribute('data-action', 'auth.sign_in.succeeded');
+    // The sign-in that opened this page is recorded. Asserted by presence rather
+    // than by being the newest row: other specs run in parallel and write their
+    // own entries, so "most recent" is not this test's to claim.
+    await expect(
+      page.getByTestId('audit-row').filter({ hasText: 'auth.sign_in.succeeded' }).first(),
+    ).toBeVisible();
+
+    // Newest first is the actual requirement, and it holds however many other
+    // entries landed: every timestamp is at or before the one above it.
+    const ordered = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-testid="audit-row"] span:first-child')]
+        .map((node) => Date.parse(node.textContent ?? ''))
+        .filter((value) => !Number.isNaN(value)),
+    );
+
+    expect(ordered.length).toBeGreaterThan(0);
+    expect([...ordered].sort((a, b) => b - a)).toEqual(ordered);
   });
 
   test('filters by action', async ({ page }) => {

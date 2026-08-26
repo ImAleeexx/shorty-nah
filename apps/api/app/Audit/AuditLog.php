@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Writes the audit trail.
@@ -33,6 +35,31 @@ final class AuditLog
         ?string $targetId = null,
         array $context = [],
         ?Request $request = null,
+    ): void {
+        try {
+            $this->insert($action, $actor, $targetType, $targetId, $context, $request);
+        } catch (Throwable $e) {
+            // Every caller records after the change has already been applied, so
+            // propagating would turn an applied change into a 500: the account is
+            // gone, the caller is told it failed, and nothing is in the trail.
+            // Losing the entry is bad; lying about the outcome is worse.
+            Log::error('Failed to record an audit entry.', [
+                'action' => $action->value,
+                'reason' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string, scalar|null>  $context
+     */
+    private function insert(
+        AuditAction $action,
+        ?User $actor,
+        ?string $targetType,
+        ?string $targetId,
+        array $context,
+        ?Request $request,
     ): void {
         DB::table('audit_entries')->insert([
             'actor_id' => $actor?->id,
