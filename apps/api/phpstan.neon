@@ -1,0 +1,16 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 8
+
+    # tests/ is excluded because PHPStan cannot resolve $this inside Pest's bound
+    # test closures, which reports every assertion as an undefined method. Test
+    # correctness is covered by running the suite, not by analysing it.
+    paths:
+        - app
+        - config
+        - database
+        - routes
+
+    tmpDir: storage/framework/cache/phpstan
