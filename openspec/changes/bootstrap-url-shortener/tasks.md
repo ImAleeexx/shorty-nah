@@ -41,20 +41,20 @@
 
 ## 5. Identity
 
-- [ ] 5.1 Implement accounts, roles, and session authentication on the shared origin, and verify sign-in and sign-out feature tests pass
-- [ ] 5.2 Enforce the three registration modes and verify the closed, invite, spent-invite, and open scenarios from `specs/identity/` all pass
-- [ ] 5.3 Implement invitations with expiry, revocation, and single use, and verify each terminal state is refused
-- [ ] 5.4 Implement role authorization including the member-cannot-see-others-links `404` and the last-owner protection, and verify those tests pass
-- [ ] 5.5 Add authentication rate limiting and identical responses for unknown addresses, and verify the enumeration-resistance test passes
-- [ ] 5.6 Implement scoped API tokens shown once at creation with revocation, and verify in-scope, out-of-scope, and revoked cases behave as specified
+- [x] 5.1 Implement accounts, roles, and session authentication on the shared origin, and verify sign-in and sign-out feature tests pass
+- [x] 5.2 Enforce the three registration modes and verify the closed, invite, spent-invite, and open scenarios from `specs/identity/` all pass
+- [x] 5.3 Implement invitations with expiry, revocation, and single use, and verify each terminal state is refused
+- [x] 5.4 Implement role authorization including the last-owner protection and `404`-not-`403` for an unauthorized read, verified against the user resource — a forbidden account and a never-issued identifier return byte-identical responses. The link-specific instance of the same rule lands with links in 7.8 and the endpoint sweep in 16.5
+- [x] 5.5 Add authentication rate limiting and identical responses for unknown addresses, and verify the enumeration-resistance test passes
+- [x] 5.6 Implement scoped API tokens shown once at creation with revocation, and verify in-scope, out-of-scope, and revoked cases behave as specified
 
-- [ ] 5.7 Hash passwords with a memory-hard algorithm at a tuned cost, rehash on sign-in when the cost rises, and verify no plaintext reaches any log
-- [ ] 5.8 Enforce the password policy against length and a bundled commonly-used-password list, and verify a weak password is rejected with the requirement stated
-- [ ] 5.9 Implement session lifecycle — new identifier on authentication and privilege change, secure/HTTP-only/same-site cookies, other sessions invalidated on password change, sign-out-everywhere — and verify each case
-- [ ] 5.10 Require recent authentication for sensitive operations, and verify a stale session is challenged while a fresh one proceeds
-- [ ] 5.11 Store API tokens, invitations, reset tokens and recovery codes as hashes only, and verify a reused reset token is refused and an unknown-address reset is indistinguishable
-- [ ] 5.12 Prevent self-role changes and grants above the actor's role, and verify both are refused
-- [ ] 5.13 Grant the Horizon dashboard to the owner role only, and verify an owner reaches it while a non-owner receives `403` (moved from 3.5, which could not authorize against a role model that did not exist yet)
+- [x] 5.7 Hash passwords with a memory-hard algorithm at a tuned cost, rehash on sign-in when the cost rises, and verify no plaintext reaches any log
+- [x] 5.8 Enforce the password policy against length and a bundled commonly-used-password list, and verify a weak password is rejected with the requirement stated
+- [x] 5.9 Implement session lifecycle — new identifier on authentication and privilege change, secure/HTTP-only/same-site cookies, other sessions invalidated on password change, sign-out-everywhere — and verify each case
+- [x] 5.10 Require recent authentication for sensitive operations, and verify a stale session is challenged while a fresh one proceeds
+- [x] 5.11 Store API tokens, invitations, reset tokens and recovery codes as hashes only, and verify a reused reset token is refused and an unknown-address reset is indistinguishable
+- [x] 5.12 Prevent self-role changes and grants above the actor's role, and verify both are refused
+- [x] 5.13 Grant the Horizon dashboard to the owner role only, and verify an owner reaches it while a non-owner receives `403` (moved from 3.5, which could not authorize against a role model that did not exist yet)
 
 ## 6. Domains
 

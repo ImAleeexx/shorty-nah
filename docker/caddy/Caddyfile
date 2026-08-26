@@ -40,7 +40,7 @@
 
 	# Bare paths are listed alongside their subtrees: a /horizon/* matcher
 	# alone does not match /horizon itself.
-	@api path /api/* /horizon /horizon/* /storage /storage/* /up
+	@api path /api/* /sanctum/* /horizon /horizon/* /storage /storage/* /up
 	handle @api {
 		reverse_proxy api:8000
 	}

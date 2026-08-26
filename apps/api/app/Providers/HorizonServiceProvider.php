@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\HorizonApplicationServiceProvider;
@@ -26,12 +27,17 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
      * This gate determines who can access Horizon in non-local environments.
      */
     /**
-     * Horizon exposes queue payloads, so the dashboard is closed to everyone
-     * until the role model exists and can grant it to owners. Denying by default
-     * is the correct state to fail into.
+     * Horizon exposes queue payloads — destinations, visitor hashes, job
+     * arguments — so it is owner-only. Anything less than an explicit role check
+     * would make an operational tool a disclosure surface.
      */
     protected function gate(): void
     {
-        Gate::define('viewHorizon', static fn (mixed $user = null): bool => false);
+        Gate::define(
+            'viewHorizon',
+            static fn (mixed $user = null): bool => $user instanceof User
+                && $user->isOwner()
+                && ! $user->isDisabled(),
+        );
     }
 }
