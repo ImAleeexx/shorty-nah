@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Links\ClickCounter;
 use App\Models\Domain;
 use App\Models\Link;
+use App\Providers\ClickHouseServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Testing\TestResponse;
@@ -22,6 +23,15 @@ function go(string $host, string $slug): TestResponse
 beforeEach(function (): void {
     cache()->flush();
     RateLimiter::clear('redirect:127.0.0.1');
+
+    // Reconciliation consults the event store, so these tests need it empty.
+    // Without this they inherit whatever the analytics suite left behind.
+    $events = app(ClickHouseServiceProvider::WRITER);
+
+    if ($events->ping()) {
+        $events->statement('TRUNCATE TABLE IF EXISTS click_events');
+        $events->statement('TRUNCATE TABLE IF EXISTS click_hourly');
+    }
 });
 
 // --- 8.6 constraints, indistinguishably ---

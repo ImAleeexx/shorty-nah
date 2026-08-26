@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Analytics\AnalyticsReader;
 use App\Clicks\ClickQueue;
 use App\Clicks\ClickToken;
 use App\Clicks\ClickWriter;
@@ -58,6 +59,13 @@ class AppServiceProvider extends ServiceProvider
             connection: $app->make(ClickHouseServiceProvider::WRITER),
             cache: $app->make('cache.store'),
             logger: $app->make('log'),
+        ));
+
+        // Reads through the read-only ClickHouse identity: a reporting query must
+        // not be able to mutate the event store.
+        $this->app->singleton(AnalyticsReader::class, fn (Application $app): AnalyticsReader => new AnalyticsReader(
+            connection: $app->make(ClickHouseServiceProvider::READER),
+            settings: $app->make(SettingsStore::class),
         ));
 
         // Signed with the application key: a beacon token must be unmintable by

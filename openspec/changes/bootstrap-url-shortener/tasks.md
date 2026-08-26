@@ -113,13 +113,13 @@
 
 ## 11. Analytics storage and reporting
 
-- [ ] 11.1 Write the events table as `MergeTree` ordered by `(link_id, occurred_at)` with a retention `TTL`, and verify expired events are removed while aggregates remain
-- [ ] 11.2 Write the `AggregatingMergeTree` materialized views for hourly totals and country, referrer, device, and browser breakdowns, and verify an insert updates them without a job
-- [ ] 11.3 Implement reporting queries served only from aggregates with instance-timezone bucketing, and verify a twelve-month report over a large dataset meets the response budget
-- [ ] 11.4 Implement paginated raw-event drill-down for a link and verify the endpoint tests pass
-- [ ] 11.5 Implement click-event export excluding network addresses and verify the exported file contains the period's events and no address column
-- [ ] 11.6 Verify unique counts are reported per period and never summed across periods
-- [ ] 11.7 Reconcile the Redis click counters against the event store rather than against the persisted count, and verify a counter drifting from recorded events converges to the event total
+- [x] 11.1 Write the events table as `MergeTree` ordered by `(link_id, occurred_at)` with a retention `TTL`, and verify expired events are removed while aggregates remain
+- [x] 11.2 Write the `AggregatingMergeTree` materialized views for hourly totals and country, referrer, device, and browser breakdowns, and verify an insert updates them without a job
+- [x] 11.3 Implement reporting queries served only from aggregates with instance-timezone bucketing, and verify a twelve-month report over 300,000 events answers in under a second, and that no report query reads the raw events table — asserted against the tables each query actually touched, not against its text
+- [x] 11.4 Implement paginated raw-event drill-down for a link and verify the endpoint tests pass
+- [x] 11.5 Implement click-event export excluding network addresses and verify the exported file contains the period's events and no address column
+- [x] 11.6 Verify unique counts are reported per period and never summed across periods
+- [x] 11.7 Reconcile the Redis click counters against the event store rather than against the persisted count, and verify a counter drifting from recorded events converges to the event total
 
 ## 12. Web foundation, design system, and branding
 
