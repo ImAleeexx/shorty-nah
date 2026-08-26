@@ -26,7 +26,10 @@ export function Stat({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-col gap-1', className)}>
+    <div
+      className={cn('flex flex-col gap-1', className)}
+      data-testid={`stat-${label.toLowerCase().replace(/\s+/g, '-')}`}
+    >
       <span className="text-ink-subtle text-xs font-medium tracking-wide uppercase">{label}</span>
 
       <span className="tabular text-ink text-3xl leading-none font-semibold tracking-tight">

@@ -1,5 +1,6 @@
 'use client';
 
+import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -239,6 +240,14 @@ export function LinkTable({
               <span className="tabular text-ink-muted text-xs">{link.click_count}</span>
 
               <div className="flex items-center gap-1">
+                <NextLink
+                  href={`/links/${link.id}`}
+                  className="text-ink-muted hover:text-ink rounded-(--radius-token-sm) px-3 py-1.5 text-sm"
+                  data-testid={`report-${link.slug}`}
+                >
+                  Report
+                </NextLink>
+
                 <Button
                   intent="ghost"
                   size="icon"
