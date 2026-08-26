@@ -11,7 +11,7 @@ API_RUN      := $(COMPOSE) run --rm --no-deps api
 WEB          := $(COMPOSE) exec web
 
 .PHONY: help up down restart logs ps setup build sh tinker migrate fresh ch-migrate \
-        test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins lint-syntax \
+        test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins lint-syntax e2e-fixture \
         queue-status backup
 
 help: ## List available targets
@@ -86,8 +86,11 @@ test-api: ## Run the Pest suite
 test-web: ## Run the Vitest suite
 	$(WEB) pnpm test --run
 
-e2e: ## Run the Playwright suite
-	$(WEB) pnpm test:e2e
+e2e-fixture: ## Seed the fixture the browser suite drives
+	$(API) php artisan shortynah:e2e-fixture
+
+e2e: e2e-fixture ## Seed the fixture and run the Playwright suite
+	cd apps/web && pnpm exec playwright test
 
 lint: lint-api lint-web ## Run every linter
 

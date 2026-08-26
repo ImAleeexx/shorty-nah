@@ -6,6 +6,7 @@ use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SessionController;
+use App\Http\Controllers\ClickBeaconController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LinkController;
@@ -23,6 +24,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('/internal/tls-authorize', TlsAuthorizationController::class)
     ->middleware('throttle:tls-authorize')
     ->name('internal.tls-authorize');
+
+// The hold page's measurement. Unauthenticated by necessity — a visitor has no
+// session — and admits nothing without a signed, unredeemed click token.
+Route::post('/clicks/beacon', ClickBeaconController::class)
+    ->middleware('throttle:beacon')
+    ->name('clicks.beacon');
 
 Route::prefix('v1')->group(function (): void {
     // Read before anyone signs in, so the interface can render branding on first

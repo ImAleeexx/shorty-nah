@@ -2,12 +2,14 @@
 
 namespace App\Providers;
 
+use App\Clicks\ClickToken;
 use App\Domains\DnsResolver;
 use App\Domains\SystemDnsResolver;
 use App\Links\DatabaseSlugAvailability;
 use App\Links\SlugAvailability;
 use App\Listeners\VerifyDependencies;
 use App\Settings\SettingsStore;
+use App\Support\ConfigValue;
 use App\Support\TrustedProxies;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
@@ -34,6 +36,13 @@ class AppServiceProvider extends ServiceProvider
         // deterministic nor fast.
         $this->app->bind(DnsResolver::class, SystemDnsResolver::class);
         $this->app->bind(SlugAvailability::class, DatabaseSlugAvailability::class);
+
+        // Signed with the application key: a beacon token must be unmintable by
+        // anyone who does not already hold the instance's secret.
+        $this->app->singleton(ClickToken::class, fn (Application $app): ClickToken => new ClickToken(
+            cache: $app->make('cache.store'),
+            key: ConfigValue::string(config('app.key'), 'APP_KEY'),
+        ));
 
         $this->app->singleton(SettingsStore::class, fn (Application $app): SettingsStore => new SettingsStore(
             database: $app->make('db.connection'),
@@ -72,6 +81,12 @@ class AppServiceProvider extends ServiceProvider
         // refused, tight enough that walking the slug space is not free. Keyed on
         // the address the trusted-proxy contract produced, never on a header a
         // client controls.
+        // One beacon per interstitial view, so this only needs to allow a
+        // visitor's own pages. A token is single-use anyway; the limit is here so
+        // the endpoint cannot be hammered.
+        RateLimiter::for('beacon', static fn (Request $request): Limit => Limit::perMinute(120)
+            ->by((string) $request->ip()));
+
         RateLimiter::for('redirect', static fn (Request $request): Limit => Limit::perMinute(240)
             ->by((string) $request->ip())
             ->response(static fn (): Response => new Response('Too many requests', 429, [
