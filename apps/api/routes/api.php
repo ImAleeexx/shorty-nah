@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\ApiTokenController;
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SessionController;
@@ -90,6 +91,10 @@ Route::prefix('v1')->group(function (): void {
         // Not behind recent authentication: the security contract enumerates the
         // operations that require it — email, password, second factor, API token
         // and domain deletion — and instance configuration is not one of them.
+        // Read-only, owner-only, and newest first. There is no write route here
+        // and the application's database role holds no privilege to add one.
+        Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+
         Route::get('/settings', [SettingsController::class, 'show'])->name('settings.show');
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 

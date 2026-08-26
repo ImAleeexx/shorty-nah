@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Stat } from '@/components/ui/stat';
 import { fetchPublicConfiguration } from '@/lib/api';
 import { sanitiseBranding } from '@/lib/branding';
-import { currentViewer } from '@/lib/session';
+import { currentViewer, owns } from '@/lib/session';
 
 export default async function DashboardPage() {
   const configuration = await fetchPublicConfiguration();
@@ -28,7 +28,7 @@ export default async function DashboardPage() {
   const branding = sanitiseBranding(configuration);
 
   return (
-    <AppShell branding={branding}>
+    <AppShell branding={branding} owner={owns(viewer)}>
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-ink text-xl font-semibold tracking-tight">Overview</h1>

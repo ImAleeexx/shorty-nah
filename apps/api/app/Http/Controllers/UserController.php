@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -42,7 +44,7 @@ final class UserController
         return new JsonResponse(['user' => $this->present($target)]);
     }
 
-    public function updateRole(Request $request, string $publicId): JsonResponse
+    public function updateRole(Request $request, string $publicId, AuditLog $audit): JsonResponse
     {
         /** @var User $actor */
         $actor = $request->user();
@@ -84,12 +86,23 @@ final class UserController
             ])->status(422);
         }
 
+        $previous = $target->role->value;
+
         $target->forceFill(['role' => $role->value])->save();
+
+        $audit->record(
+            AuditAction::RoleChanged,
+            actor: $actor,
+            targetType: 'user',
+            targetId: $target->public_id,
+            context: ['from' => $previous, 'to' => $role->value],
+            request: $request,
+        );
 
         return new JsonResponse(['user' => $this->present($target->refresh())]);
     }
 
-    public function destroy(Request $request, string $publicId): JsonResponse
+    public function destroy(Request $request, string $publicId, AuditLog $audit): JsonResponse
     {
         /** @var User $actor */
         $actor = $request->user();
@@ -110,7 +123,21 @@ final class UserController
             ])->status(422);
         }
 
+        $removed = $target->public_id;
+        $email = $target->email;
+
         $target->delete();
+
+        // Recorded after the fact with the identifiers copied out: the entry has
+        // to survive the row it describes.
+        $audit->record(
+            AuditAction::UserRemoved,
+            actor: $actor,
+            targetType: 'user',
+            targetId: $removed,
+            context: ['email' => $email],
+            request: $request,
+        );
 
         return new JsonResponse(status: 204);
     }

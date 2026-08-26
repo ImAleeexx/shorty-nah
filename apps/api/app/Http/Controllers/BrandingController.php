@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Branding\BrandingAssetStore;
 use App\Branding\BrandingBounds;
 use App\Branding\BrandingException;
@@ -34,7 +36,7 @@ final class BrandingController
         ]);
     }
 
-    public function update(Request $request, SettingsStore $settings): JsonResponse
+    public function update(Request $request, SettingsStore $settings, AuditLog $audit): JsonResponse
     {
         if (! $this->administrates($request)) {
             return new JsonResponse(status: 404);
@@ -87,6 +89,14 @@ final class BrandingController
         }
 
         $settings->setMany($changes);
+
+        $audit->record(
+            AuditAction::BrandingChanged,
+            actor: $request->user(),
+            targetType: 'settings',
+            context: ['keys' => implode(',', array_keys($changes))],
+            request: $request,
+        );
 
         $accent = $settings->string('branding.accent') ?? '';
 

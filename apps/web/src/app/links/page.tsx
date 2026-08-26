@@ -7,7 +7,7 @@ import { fetchPublicConfiguration } from '@/lib/api';
 import { sanitiseBranding } from '@/lib/branding';
 import type { DomainRecord, LinkPage } from '@/lib/links';
 import { apiGet } from '@/lib/server-api';
-import { currentViewer, mayWrite } from '@/lib/session';
+import { currentViewer, mayWrite, owns } from '@/lib/session';
 
 export const metadata: Metadata = { title: 'Links' };
 
@@ -32,7 +32,11 @@ export default async function LinksPage() {
   ]);
 
   return (
-    <AppShell branding={sanitiseBranding(configuration)} links={links.ok ? links.data.links : []}>
+    <AppShell
+      branding={sanitiseBranding(configuration)}
+      links={links.ok ? links.data.links : []}
+      owner={owns(viewer)}
+    >
       <LinkTable
         initial={links.ok ? links.data.links : []}
         domains={domains.ok ? domains.data.domains : []}

@@ -88,7 +88,23 @@ final class SeedEndToEndClicks extends Command
             $connection->insert(ClickWriter::TABLE, $chunk);
         }
 
-        $this->components->info("Inserted {$count} click events for /{$slug}.");
+        // Read back before reporting success. A silent shortfall here surfaces
+        // later as a browser test failing on an empty report, which says nothing
+        // about the code under test.
+        $rows = $connection->select(
+            'SELECT count() AS total FROM '.ClickWriter::TABLE.' WHERE link_id = {link:UInt64}',
+            ['link' => $link->id],
+        );
+
+        $stored = (int) ($rows[0]['total'] ?? 0);
+
+        if ($stored < $count) {
+            $this->components->error("Only {$stored} of {$count} events are queryable for /{$slug}.");
+
+            return self::FAILURE;
+        }
+
+        $this->components->info("Inserted {$count} click events for /{$slug}; {$stored} queryable.");
 
         return self::SUCCESS;
     }

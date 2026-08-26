@@ -6,10 +6,13 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
 
 const DESTINATIONS = [
-  { href: '/', label: 'Overview' },
-  { href: '/links', label: 'Links' },
-  { href: '/people', label: 'People' },
-  { href: '/settings', label: 'Settings' },
+  { href: '/', label: 'Overview', ownerOnly: false },
+  { href: '/links', label: 'Links', ownerOnly: false },
+  { href: '/people', label: 'People', ownerOnly: false },
+  { href: '/settings', label: 'Settings', ownerOnly: false },
+  // The audit log is an owner surface, so it is absent rather than disabled for
+  // anyone else — a greyed-out link still discloses that it exists.
+  { href: '/audit', label: 'Audit', ownerOnly: true },
 ] as const;
 
 /**
@@ -18,12 +21,12 @@ const DESTINATIONS = [
  * No transition on the active state: this is a surface an operator moves through
  * dozens of times a day, and animating it turns navigation into a wait.
  */
-export function AppNav() {
+export function AppNav({ owner = false }: { owner?: boolean }) {
   const pathname = usePathname();
 
   return (
     <nav className="mr-2 flex items-center gap-1">
-      {DESTINATIONS.map((destination) => {
+      {DESTINATIONS.filter((destination) => owner || !destination.ownerOnly).map((destination) => {
         const active =
           destination.href === '/' ? pathname === '/' : pathname.startsWith(destination.href);
 

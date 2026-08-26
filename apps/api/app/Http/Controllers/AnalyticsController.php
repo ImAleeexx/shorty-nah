@@ -8,6 +8,8 @@ use App\Analytics\AnalyticsReader;
 use App\Analytics\Granularity;
 use App\Analytics\RawEventReader;
 use App\Analytics\ReportPeriod;
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Models\Link;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -71,7 +73,7 @@ final class AnalyticsController
         ]);
     }
 
-    public function export(Request $request, string $publicId, RawEventReader $reader, AnalyticsReader $analytics): StreamedResponse|JsonResponse
+    public function export(Request $request, string $publicId, RawEventReader $reader, AnalyticsReader $analytics, AuditLog $audit): StreamedResponse|JsonResponse
     {
         $link = $this->visibleLink($request, $publicId);
 
@@ -83,6 +85,17 @@ final class AnalyticsController
         $rows = $reader->forExport($link->id, $period);
 
         $filename = sprintf('clicks-%s-%s.csv', $link->slug, $period->from->format('Y-m-d'));
+
+        // Recorded before the stream begins: an export that starts is an export
+        // that happened, whatever the client does with the body afterwards.
+        $audit->record(
+            AuditAction::AnalyticsExported,
+            actor: $request->user(),
+            targetType: 'link',
+            targetId: $link->public_id,
+            context: ['rows' => count($rows), 'from' => $period->from->toIso8601String()],
+            request: $request,
+        );
 
         return new StreamedResponse(function () use ($rows): void {
             $handle = fopen('php://output', 'wb');

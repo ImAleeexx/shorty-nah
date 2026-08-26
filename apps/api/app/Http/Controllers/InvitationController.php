@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Auth\InvitationService;
 use App\Enums\Role;
 use App\Models\Invitation;
@@ -39,7 +41,7 @@ final class InvitationController
         return new JsonResponse(['invitations' => $invitations]);
     }
 
-    public function store(Request $request, InvitationService $invitations): JsonResponse
+    public function store(Request $request, InvitationService $invitations, AuditLog $audit): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -66,6 +68,17 @@ final class InvitationController
             throw ValidationException::withMessages(['role' => $e->getMessage()])->status(403);
         }
 
+        // The token itself is never recorded: only its hash exists anywhere, and
+        // an audit entry is not the place to reintroduce it.
+        $audit->record(
+            AuditAction::InvitationIssued,
+            actor: $user,
+            targetType: 'invitation',
+            targetId: $issued['invitation']->public_id,
+            context: ['email' => $issued['invitation']->email, 'role' => $issued['invitation']->role->value],
+            request: $request,
+        );
+
         return new JsonResponse([
             'id' => $issued['invitation']->public_id,
             'email' => $issued['invitation']->email,
@@ -76,7 +89,7 @@ final class InvitationController
         ], 201);
     }
 
-    public function destroy(Request $request, Invitation $invitation, InvitationService $invitations): JsonResponse
+    public function destroy(Request $request, Invitation $invitation, InvitationService $invitations, AuditLog $audit): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -86,6 +99,15 @@ final class InvitationController
         }
 
         $invitations->revoke($invitation);
+
+        $audit->record(
+            AuditAction::InvitationRevoked,
+            actor: $user,
+            targetType: 'invitation',
+            targetId: $invitation->public_id,
+            context: ['email' => $invitation->email],
+            request: $request,
+        );
 
         return new JsonResponse(status: 204);
     }

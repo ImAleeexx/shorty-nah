@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Auth\AuthenticationService;
 use App\Auth\RegistrationService;
 use App\Branding\BrandingBounds;
@@ -292,6 +294,7 @@ final class SetupController
         SetupToken $token,
         RegistrationService $registration,
         AuthenticationService $auth,
+        AuditLog $audit,
     ): JsonResponse {
         $outstanding = $progress->next();
 
@@ -321,6 +324,13 @@ final class SetupController
         $progress->reset();
 
         $auth->establishSession($request, $owner);
+
+        $audit->record(
+            AuditAction::InstallationCompleted,
+            actor: $owner,
+            targetType: 'instance',
+            request: $request,
+        );
 
         return new JsonResponse([
             'installed' => true,

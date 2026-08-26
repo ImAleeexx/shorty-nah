@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Auth\RegistrationService;
 use App\Branding\BrandingBounds;
 use App\Domains\DomainException;
@@ -71,6 +73,7 @@ final class Install extends Command
         DependencyProbe $probe,
         SetupProgress $progress,
         SetupToken $token,
+        AuditLog $audit,
     ): int {
         if ($settings->installed()) {
             $this->components->error('This instance is already installed; nothing was changed.');
@@ -110,7 +113,7 @@ final class Install extends Command
             return self::FAILURE;
         }
 
-        $registration->createOwner($values['admin-name'], $values['admin-email'], $values['admin-password']);
+        $owner = $registration->createOwner($values['admin-name'], $values['admin-email'], $values['admin-password']);
 
         $settings->set('instance.name', $values['instance-name']);
 
@@ -132,6 +135,15 @@ final class Install extends Command
 
         $token->invalidate();
         $progress->reset();
+
+        // No request here, so the entry carries no source identifier — which is
+        // the truth about a headless install.
+        $audit->record(
+            AuditAction::InstallationCompleted,
+            actor: $owner,
+            targetType: 'instance',
+            context: ['headless' => true],
+        );
 
         $this->components->info("Installed. Sign in as {$values['admin-email']}.");
 

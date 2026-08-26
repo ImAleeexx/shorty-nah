@@ -21,8 +21,13 @@ x-api-env: &api-env
   DB_HOST: postgres
   DB_PORT: 5432
   DB_DATABASE: ${DB_DATABASE:?DB_DATABASE is required}
-  DB_USERNAME: ${DB_USERNAME:?DB_USERNAME is required}
-  DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+  # The application's own role, which is not a superuser and holds no UPDATE or
+  # DELETE on the audit table.
+  DB_USERNAME: ${DB_APP_USERNAME:?DB_APP_USERNAME is required}
+  DB_PASSWORD: ${DB_APP_PASSWORD:?DB_APP_PASSWORD is required}
+  # The owning role. Used only to apply schema, never to serve a request.
+  DB_OWNER_USERNAME: ${DB_USERNAME:?DB_USERNAME is required}
+  DB_OWNER_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
   REDIS_HOST: redis
   REDIS_PORT: 6379
   REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
@@ -192,8 +197,11 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       # Without this the image initialises with trust authentication.
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+      DB_APP_USERNAME: ${DB_APP_USERNAME:?DB_APP_USERNAME is required}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?DB_APP_PASSWORD is required}
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-roles.sh:/docker-entrypoint-initdb.d/init-roles.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s

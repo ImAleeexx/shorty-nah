@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Models\User;
 use App\Settings\Setting;
 use App\Settings\SettingsRegistry;
@@ -64,7 +66,7 @@ final class SettingsController
         ]);
     }
 
-    public function update(Request $request, SettingsStore $settings): JsonResponse
+    public function update(Request $request, SettingsStore $settings, AuditLog $audit): JsonResponse
     {
         if (! $this->administrates($request)) {
             return new JsonResponse(status: 404);
@@ -114,6 +116,16 @@ final class SettingsController
         }
 
         $settings->setMany($changes);
+
+        // Keys only. A sensitive setting's new value must not reappear in the
+        // audit trail, which is exactly where nobody would think to look for it.
+        $audit->record(
+            AuditAction::SettingsChanged,
+            actor: $request->user(),
+            targetType: 'settings',
+            context: ['keys' => implode(',', array_keys($changes))],
+            request: $request,
+        );
 
         return $this->show($request, $settings);
     }

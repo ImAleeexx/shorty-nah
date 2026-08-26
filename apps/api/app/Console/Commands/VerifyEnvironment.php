@@ -33,6 +33,10 @@ final class VerifyEnvironment extends Command
         'database.connections.pgsql.database' => 'DB_DATABASE',
         'database.connections.pgsql.username' => 'DB_USERNAME',
         'database.connections.pgsql.password' => 'DB_PASSWORD',
+        // The owning role is separate on purpose: the application's role holds
+        // no UPDATE or DELETE on the audit table, so it cannot apply schema.
+        'database.connections.pgsql_owner.username' => 'DB_OWNER_USERNAME',
+        'database.connections.pgsql_owner.password' => 'DB_OWNER_PASSWORD',
         'database.redis.default.host' => 'REDIS_HOST',
         'clickhouse.host' => 'CLICKHOUSE_HOST',
         'clickhouse.database' => 'CLICKHOUSE_DATABASE',

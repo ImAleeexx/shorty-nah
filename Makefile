@@ -12,7 +12,7 @@ WEB          := $(COMPOSE) exec web
 
 .PHONY: help up down restart logs ps setup build sh tinker migrate fresh ch-migrate setup-token token-dir \
         test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins lint-syntax e2e-fixture \
-        queue-status backup restore e2e-setup e2e-setup-fixture check-secrets verify-schema verify-shutdown verify-restore
+        queue-status backup restore e2e-setup e2e-setup-fixture check-secrets verify-schema verify-audit verify-shutdown verify-restore
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -66,11 +66,13 @@ queue-status: ## Show Horizon queue state
 
 ## --- Databases ---
 
+# Applied as the owning role. The application's role cannot alter the audit
+# table, which includes not being able to create it.
 migrate: ## Apply Postgres migrations
-	$(API) php artisan migrate --force
+	$(API) php artisan migrate --database=pgsql_owner --force
 
 fresh: ## Drop, migrate and seed Postgres (destructive)
-	$(API) php artisan migrate:fresh --seed
+	$(API) php artisan migrate:fresh --database=pgsql_owner --seed
 
 ch-migrate: ## Apply the ClickHouse event schema
 	$(API) php artisan clickhouse:migrate
@@ -147,6 +149,9 @@ check-secrets: ## Verify no instance credentials are baked into an image
 verify-schema: ## Verify schema is applied before anything serves traffic
 	./scripts/verify-schema-ordering.sh
 
+verify-audit: ## Verify the audit log cannot be rewritten by the application
+	./scripts/verify-audit-immutability.sh
+
 ## --- Operations checks (need a running stack) ---
 
 verify-shutdown: ## Verify a worker finishes or requeues its job on termination
@@ -155,4 +160,4 @@ verify-shutdown: ## Verify a worker finishes or requeues its job on termination
 verify-restore: ## Destroy this instance and prove the backup restores it
 	./scripts/verify-restore.sh
 
-ci: lint analyse typecheck test check-pins check-secrets verify-schema ## Run the full quality gate
+ci: lint analyse typecheck test check-pins check-secrets verify-schema verify-audit ## Run the full quality gate

@@ -4,16 +4,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Phases 1–15 of `openspec/changes/bootstrap-url-shortener` are implemented on
-`feat/bootstrap-foundation`: **134 of 157 tasks**. The stack runs, a link
+Phases 1–16 of `openspec/changes/bootstrap-url-shortener` are implemented on
+`feat/bootstrap-foundation`: **140 of 157 tasks**. The stack runs, a link
 redirects, clicks land in ClickHouse enriched, reports answer from rollups, a
 fresh instance can be walked from first boot to a signed-in dashboard, and an
 operator can sign in and manage links, analytics, settings, branding and people
 through the interface.
 
-Phase 16 (authorization and audit) is next. One task of phase 14 is deliberately
-open: 14.15, the audit log viewer, is blocked on the audit log itself, which
-phase 16 builds — it closes there.
+Phase 17 (two-factor authentication) is next. Phase 14 is now complete: 14.15
+closed with the audit log it views.
+
+**Postgres has two roles, on purpose.** `DB_USERNAME` owns the schema and applies
+migrations; the application connects as `DB_APP_USERNAME`, which is not a
+superuser and holds no `UPDATE` or `DELETE` on `audit_entries`. That split is the
+whole enforcement behind the append-only audit log — a superuser bypasses every
+permission check, so a revoke against one is decoration. Migrations therefore run
+as `--database=pgsql_owner`; `make migrate` and the entrypoint already do.
 
 Operations checks live in `scripts/` and are wired into `make`: `check-secrets`
 and `verify-schema` run in `make ci`; `verify-shutdown` and `verify-restore` need

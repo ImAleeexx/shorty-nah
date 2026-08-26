@@ -82,7 +82,10 @@ case "${1:-octane}" in
 
     schema)
         verify_environment
-        php artisan migrate --force
+        # Applied as the owning role, not the application's. The application's
+        # role deliberately cannot alter the audit table, which includes not
+        # being able to create it.
+        php artisan migrate --database=pgsql_owner --force
         php artisan clickhouse:migrate
         php artisan shortynah:setup-token
         ;;

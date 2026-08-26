@@ -9,7 +9,7 @@ import { fetchPublicConfiguration } from '@/lib/api';
 import { sanitiseBranding } from '@/lib/branding';
 import type { DomainRecord } from '@/lib/links';
 import { apiGet } from '@/lib/server-api';
-import { administrates, currentViewer } from '@/lib/session';
+import { administrates, currentViewer, owns } from '@/lib/session';
 
 export const metadata: Metadata = { title: 'Settings' };
 
@@ -42,7 +42,7 @@ export default async function SettingsPage() {
   const branding = sanitiseBranding(configuration);
 
   return (
-    <AppShell branding={branding}>
+    <AppShell branding={branding} owner={owns(viewer)}>
       <div className="mb-8">
         <h1 className="text-ink text-xl font-semibold tracking-tight">Settings</h1>
         <p className="text-ink-muted mt-1 text-sm">

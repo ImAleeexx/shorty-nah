@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Auth\AuthenticationService;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +24,7 @@ final class SessionController
 
     private const DECAY_SECONDS = 300;
 
-    public function store(Request $request, AuthenticationService $auth): JsonResponse
+    public function store(Request $request, AuthenticationService $auth, AuditLog $audit): JsonResponse
     {
         /** @var array{email: string, password: string} $credentials */
         $credentials = $request->validate([
@@ -48,6 +50,15 @@ final class SessionController
                 RateLimiter::hit($key, self::DECAY_SECONDS);
             }
 
+            // The address is recorded as a derived identifier and the submitted
+            // password is not recorded at all.
+            $audit->record(
+                AuditAction::SignInFailed,
+                targetType: 'user',
+                targetId: $credentials['email'],
+                request: $request,
+            );
+
             // One message for every failure mode.
             throw ValidationException::withMessages([
                 'email' => 'Those credentials do not match our records.',
@@ -57,6 +68,8 @@ final class SessionController
         foreach ($this->limiterKeys($request, $credentials['email']) as $key) {
             RateLimiter::clear($key);
         }
+
+        $audit->record(AuditAction::SignInSucceeded, actor: $user, request: $request);
 
         return new JsonResponse([
             'user' => [
@@ -88,9 +101,14 @@ final class SessionController
         ]);
     }
 
-    public function destroy(Request $request, AuthenticationService $auth): JsonResponse
+    public function destroy(Request $request, AuthenticationService $auth, AuditLog $audit): JsonResponse
     {
+        /** @var User|null $user */
+        $user = $request->user();
+
         $auth->signOut($request);
+
+        $audit->record(AuditAction::SignedOut, actor: $user, request: $request);
 
         return new JsonResponse(status: 204);
     }

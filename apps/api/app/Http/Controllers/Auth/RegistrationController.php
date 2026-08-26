@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Audit\AuditAction;
+use App\Audit\AuditLog;
 use App\Auth\AuthenticationService;
 use App\Auth\RegistrationClosedException;
 use App\Auth\RegistrationService;
@@ -18,6 +20,7 @@ final class RegistrationController
         Request $request,
         RegistrationService $registration,
         AuthenticationService $auth,
+        AuditLog $audit,
     ): JsonResponse {
         /** @var array{name: string, email: string, password: string, invitation_token?: string} $input */
         $input = $request->validate([
@@ -36,6 +39,18 @@ final class RegistrationController
             );
         } catch (RegistrationClosedException $e) {
             throw ValidationException::withMessages(['email' => $e->getMessage()])->status(403);
+        }
+
+        if (($input['invitation_token'] ?? null) !== null) {
+            // The token is not recorded: only its hash ever existed, and this is
+            // not the place to reintroduce it.
+            $audit->record(
+                AuditAction::InvitationRedeemed,
+                actor: $user,
+                targetType: 'user',
+                targetId: $user->public_id,
+                request: $request,
+            );
         }
 
         $auth->establishSession($request, $user);
