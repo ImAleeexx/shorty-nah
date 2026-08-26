@@ -12,7 +12,7 @@ WEB          := $(COMPOSE) exec web
 
 .PHONY: help up down restart logs ps setup build sh tinker migrate fresh ch-migrate setup-token token-dir \
         test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins lint-syntax e2e-fixture \
-        queue-status backup e2e-setup e2e-setup-fixture
+        queue-status backup restore e2e-setup e2e-setup-fixture check-secrets verify-schema verify-shutdown verify-restore
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -75,8 +75,11 @@ fresh: ## Drop, migrate and seed Postgres (destructive)
 ch-migrate: ## Apply the ClickHouse event schema
 	$(API) php artisan clickhouse:migrate
 
-backup: ## Back up application data, event data and uploaded assets
-	$(API) php artisan shortynah:backup
+backup: ## Back up application data, event data and uploaded assets (encrypted)
+	./scripts/backup.sh $(DIR)
+
+restore: ## Restore a backup directory onto this instance
+	./scripts/restore.sh $(DIR)
 
 ## --- Local tooling ---
 
@@ -138,4 +141,18 @@ typecheck: ## Typecheck the web app
 check-pins: ## Verify every base image is digest-pinned
 	./scripts/check-image-pins.sh
 
-ci: lint analyse typecheck test check-pins ## Run the full quality gate
+check-secrets: ## Verify no instance credentials are baked into an image
+	./scripts/check-image-secrets.sh
+
+verify-schema: ## Verify schema is applied before anything serves traffic
+	./scripts/verify-schema-ordering.sh
+
+## --- Operations checks (need a running stack) ---
+
+verify-shutdown: ## Verify a worker finishes or requeues its job on termination
+	./scripts/verify-graceful-shutdown.sh
+
+verify-restore: ## Destroy this instance and prove the backup restores it
+	./scripts/verify-restore.sh
+
+ci: lint analyse typecheck test check-pins check-secrets verify-schema ## Run the full quality gate

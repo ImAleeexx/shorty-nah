@@ -40,6 +40,12 @@ services:
       - api-phpstan-cache:/app/storage/framework/cache/phpstan
       - geoip-data:/geoip:ro
 
+  # The schema step needs the mounted source too. Without it, it applies the
+  # migrations baked into the image, which is a different — and older — set than
+  # the one being worked on.
+  schema:
+    <<: *api-dev
+
   worker:
     <<: *api-dev
 

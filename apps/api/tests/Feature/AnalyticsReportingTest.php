@@ -6,6 +6,7 @@ use App\Analytics\AnalyticsReader;
 use App\Analytics\Granularity;
 use App\Analytics\RawEventReader;
 use App\Analytics\ReportPeriod;
+use App\ClickHouse\ClickHouseException;
 use App\ClickHouse\Connection;
 use App\Clicks\ClickWriter;
 use App\Links\ClickCounter;
@@ -240,7 +241,16 @@ it('expires raw events while keeping the rollup totals', function (): void {
     // Start from no TTL so the outcome does not depend on whatever retention a
     // previous run left applied — an existing TTL would drop the old row before
     // this test ever inserted it.
-    store()->statement('ALTER TABLE '.ClickWriter::TABLE.' REMOVE TTL');
+    //
+    // Tolerated rather than asserted: ClickHouse refuses REMOVE TTL on a table
+    // that has none, which is the desired starting state. Without this the test
+    // passes only on a store some earlier run had already applied retention to,
+    // and fails on a genuinely fresh one.
+    try {
+        store()->statement('ALTER TABLE '.ClickWriter::TABLE.' REMOVE TTL');
+    } catch (ClickHouseException) {
+        // Already has no TTL.
+    }
 
     writeEvent(1, '2020-01-01 10:00:00');
     writeEvent(1, '2026-08-26 10:00:00');
