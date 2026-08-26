@@ -4,13 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Phases 1–13 of `openspec/changes/bootstrap-url-shortener` are implemented on
-`feat/bootstrap-foundation`: **115 of 157 tasks**. The stack runs, a link
-redirects, clicks land in ClickHouse enriched, reports answer from rollups, and a
-fresh instance can be walked from first boot to a signed-in dashboard through the
-setup wizard or `shortynah:install`.
+Phases 1–14 of `openspec/changes/bootstrap-url-shortener` are implemented on
+`feat/bootstrap-foundation`: **129 of 157 tasks**. The stack runs, a link
+redirects, clicks land in ClickHouse enriched, reports answer from rollups, a
+fresh instance can be walked from first boot to a signed-in dashboard, and an
+operator can sign in and manage links, analytics, settings, branding and people
+through the interface.
 
-Phase 14 (operator interface) is next. Nothing in phases 14–19 has been started.
+Phase 15 (operations) is next. One task of phase 14 is deliberately open: 14.15,
+the audit log viewer, is blocked on the audit log itself, which is phase 16.
+
+**The interface is server-first with client islands** — a page's initial data is
+fetched by a server component forwarding the session cookie, and everything an
+operator touches is a client component that calls the API and asks the router to
+re-render. Filtering resolves in the browser against the page already sent. The
+reasoning, and the two rejected alternatives, are in `design.md`.
 
 Read `tasks.md` for what is done and what is not — several tasks carry a note
 explaining what was verified and what was deliberately deferred, and those notes
