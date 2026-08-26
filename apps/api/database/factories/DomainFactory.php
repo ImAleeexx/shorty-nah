@@ -26,6 +26,8 @@ final class DomainFactory extends Factory
             'is_primary' => false,
             'verified_at' => now(),
             'verification_token' => Str::random(32),
+            'last_checked_at' => null,
+            'last_failure' => null,
         ];
     }
 
