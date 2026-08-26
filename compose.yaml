@@ -37,6 +37,9 @@ x-api-env: &api-env
   CLICKHOUSE_READ_USERNAME: ${CLICKHOUSE_READ_USERNAME:?CLICKHOUSE_READ_USERNAME is required}
   CLICKHOUSE_READ_PASSWORD: ${CLICKHOUSE_READ_PASSWORD:?CLICKHOUSE_READ_PASSWORD is required}
   GEOIP_PATH: /geoip
+  # Host-mounted so the token survives a rotated container log. The directory is
+  # a bind mount; the file itself is written 0600.
+  SETUP_TOKEN_PATH: /var/lib/shortynah/setup/setup-token
   # Same variable as the network subnet below: the application must trust
   # exactly the network the edge sits on, and never a wildcard.
   TRUSTED_PROXIES: ${INTERNAL_SUBNET:-172.29.0.0/16}
@@ -84,6 +87,7 @@ services:
     volumes:
       - api-storage:/app/storage/app
       - geoip-data:/geoip:ro
+      - ${SETUP_TOKEN_DIR:-./run}:/var/lib/shortynah/setup
 
   worker:
     <<: *api-image

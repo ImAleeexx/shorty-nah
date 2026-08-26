@@ -10,9 +10,9 @@ API          := $(COMPOSE) exec api
 API_RUN      := $(COMPOSE) run --rm --no-deps api
 WEB          := $(COMPOSE) exec web
 
-.PHONY: help up down restart logs ps setup build sh tinker migrate fresh ch-migrate \
+.PHONY: help up down restart logs ps setup build sh tinker migrate fresh ch-migrate setup-token token-dir \
         test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins lint-syntax e2e-fixture \
-        queue-status backup
+        queue-status backup e2e-setup e2e-setup-fixture
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -20,8 +20,13 @@ help: ## List available targets
 
 ## --- Stack ---
 
-up: ## Start the stack with the dev override applied
+up: token-dir ## Start the stack with the dev override applied
 	$(COMPOSE) up -d
+
+# The setup token is written by the api container's own user, so the bind mount
+# has to be writable by it. The token file itself is created 0600.
+token-dir:
+	@mkdir -p run && chmod 0777 run
 
 down: ## Stop the stack and remove its containers
 	$(COMPOSE) down
@@ -38,7 +43,7 @@ ps: ## Show service state and health
 build: ## Rebuild the application images
 	$(COMPOSE) build
 
-setup: ## First run: build, start, apply both schemas, seed
+setup: token-dir ## First run: build, start, apply both schemas, seed
 	$(COMPOSE) build
 	$(COMPOSE) up -d
 	$(MAKE) migrate
@@ -49,6 +54,9 @@ setup: ## First run: build, start, apply both schemas, seed
 
 sh: ## Shell into the api container
 	$(API) bash
+
+setup-token: ## Show the first-boot setup token
+	$(API) php artisan shortynah:setup-token
 
 tinker: ## Open a Laravel REPL
 	$(API) php artisan tinker
@@ -89,8 +97,18 @@ test-web: ## Run the Vitest suite
 e2e-fixture: ## Seed the fixture the browser suite drives
 	$(API) php artisan shortynah:e2e-fixture
 
-e2e: e2e-fixture ## Seed the fixture and run the Playwright suite
-	cd apps/web && pnpm exec playwright test
+e2e-setup-fixture: ## Return the instance to first boot (destructive, dev only)
+	$(API) php artisan shortynah:e2e-setup-reset
+
+e2e-setup: e2e-setup-fixture ## Walk the setup wizard in a browser from first boot
+	cd apps/web && pnpm exec playwright test e2e/setup.spec.ts
+
+# Ordered, because the wizard suite needs an uninstalled instance and everything
+# else needs an installed one. The wizard leaves it installed, then the fixture
+# seeds the domain and links the rest of the suite drives.
+e2e: e2e-setup ## Run the whole browser suite, wizard first
+	$(MAKE) e2e-fixture
+	cd apps/web && pnpm exec playwright test e2e/foundation.spec.ts e2e/interstitial.spec.ts
 
 lint: lint-api lint-web ## Run every linter
 

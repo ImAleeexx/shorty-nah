@@ -13,9 +13,13 @@ use App\Http\Controllers\DomainController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\PublicConfigurationController;
+use App\Http\Controllers\SetupController;
 use App\Http\Controllers\TlsAuthorizationController;
 use App\Http\Controllers\UserController;
+use App\Http\Middleware\EnsureSetupIsOpen;
+use App\Http\Middleware\RequireInstallation;
 use App\Http\Middleware\RequireRecentAuthentication;
+use App\Http\Middleware\RequireSetupToken;
 use Illuminate\Support\Facades\Route;
 
 // The edge asks this before obtaining a certificate for a hostname, which
@@ -38,10 +42,30 @@ Route::prefix('v1')->group(function (): void {
     // paint. Carries only the registry's exposed subset.
     Route::get('/config', PublicConfigurationController::class)->name('config.public');
 
+    // First boot only. EnsureSetupIsOpen answers 404 the moment installation
+    // completes, so these routes stop existing rather than start refusing.
+    Route::prefix('setup')->middleware(EnsureSetupIsOpen::class)->group(function (): void {
+        Route::post('/token', [SetupController::class, 'token'])
+            ->middleware(['throttle:setup-token', RequireSetupToken::class])
+            ->name('setup.token');
+
+        Route::middleware([RequireSetupToken::class])->group(function (): void {
+            Route::get('/state', [SetupController::class, 'state'])->name('setup.state');
+            Route::post('/connectivity', [SetupController::class, 'connectivity'])->name('setup.connectivity');
+            Route::post('/administrator', [SetupController::class, 'administrator'])->name('setup.administrator');
+            Route::post('/instance', [SetupController::class, 'instance'])->name('setup.instance');
+            Route::post('/branding', [SetupController::class, 'branding'])->name('setup.branding');
+            Route::post('/analytics', [SetupController::class, 'analytics'])->name('setup.analytics');
+            Route::post('/registration', [SetupController::class, 'registration'])->name('setup.registration');
+            Route::post('/mail', [SetupController::class, 'mail'])->name('setup.mail');
+            Route::post('/complete', [SetupController::class, 'complete'])->name('setup.complete');
+        });
+    });
+
     Route::post('/auth/session', [SessionController::class, 'store'])->name('auth.session.store');
     Route::post('/auth/register', [RegistrationController::class, 'store'])->name('auth.register');
 
-    Route::middleware('auth:sanctum')->group(function (): void {
+    Route::middleware([RequireInstallation::class, 'auth:sanctum'])->group(function (): void {
         Route::delete('/auth/session', [SessionController::class, 'destroy'])->name('auth.session.destroy');
         Route::post('/auth/sessions/others', [PasswordController::class, 'destroyOtherSessions'])
             ->name('auth.sessions.others');

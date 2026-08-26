@@ -28,10 +28,18 @@ verify_environment() {
     php artisan shortynah:verify-env
 }
 
+# The claim gate. Tolerates failure because it needs the settings table, and a
+# process must still come up on a host whose schema has not been applied yet —
+# the schema step below emits the token as soon as it can.
+announce_setup_token() {
+    php artisan shortynah:setup-token || true
+}
+
 case "${1:-octane}" in
     octane)
         verify_environment
         warm_caches
+        announce_setup_token
         # Worker count and recycling must be passed explicitly; Octane does not
         # read them from the environment.
         # Worker count and recycling must be passed explicitly; Octane does not
@@ -76,6 +84,7 @@ case "${1:-octane}" in
         verify_environment
         php artisan migrate --force
         php artisan clickhouse:migrate
+        php artisan shortynah:setup-token
         ;;
 
     *)

@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation';
+
 import { AppShell } from '@/components/app-shell';
 import { LinkIcon, Plus } from '@/components/icons';
 import { BentoCell, BentoGrid } from '@/components/ui/bento';
@@ -9,7 +11,14 @@ import { fetchPublicConfiguration } from '@/lib/api';
 import { sanitiseBranding } from '@/lib/branding';
 
 export default async function DashboardPage() {
-  const branding = sanitiseBranding(await fetchPublicConfiguration());
+  const configuration = await fetchPublicConfiguration();
+
+  // An uninstalled instance has exactly one reachable destination.
+  if (configuration !== null && !configuration.installed) {
+    redirect('/setup');
+  }
+
+  const branding = sanitiseBranding(configuration);
 
   return (
     <AppShell branding={branding}>

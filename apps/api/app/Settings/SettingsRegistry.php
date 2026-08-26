@@ -18,6 +18,10 @@ final class SettingsRegistry
 {
     public const INSTALLED_AT = 'instance.installed_at';
 
+    public const SETUP_TOKEN_HASH = 'setup.token_hash';
+
+    public const SETUP_COMPLETED_STEPS = 'setup.completed_steps';
+
     /**
      * Immutable schema, so memoising it holds no request state and is safe under
      * a reused worker.
@@ -81,6 +85,12 @@ final class SettingsRegistry
             // --- Instance identity ---
             new Setting('instance.name', SettingType::String, 'Shorty-Nah', exposed: true),
             new Setting(self::INSTALLED_AT, SettingType::String),
+
+            // --- First-boot claim gate. The digest lives here; the plaintext
+            // exists only in the container log and the host-mounted file, so a
+            // leaked backup cannot be used to claim an uninstalled instance. ---
+            new Setting(self::SETUP_TOKEN_HASH, SettingType::String, null, sensitive: true),
+            new Setting(self::SETUP_COMPLETED_STEPS, SettingType::String),
 
             // --- Access ---
             new Setting(

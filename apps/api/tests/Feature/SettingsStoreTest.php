@@ -109,6 +109,9 @@ it('forgets a value and falls back to the default', function (): void {
 });
 
 it('reports installation state from the recorded instant', function (): void {
+    // The transition is the subject, so start from the pre-installation state.
+    $this->markUninstalled();
+
     expect(settings()->installed())->toBeFalse();
 
     settings()->set(SettingsRegistry::INSTALLED_AT, '2026-08-26T10:00:00Z');
