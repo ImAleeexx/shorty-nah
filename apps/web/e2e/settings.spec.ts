@@ -90,7 +90,10 @@ test.describe('settings', () => {
     await page.reload();
 
     await expect(page.getByTestId('footer-input')).toHaveValue(footer);
-    await expect(page.locator('footer')).toContainText(footer);
+    // By role, not by tag: Next's development error overlay renders a <footer>
+    // of its own, and a bare tag locator is ambiguous the moment anything on the
+    // page warns.
+    await expect(page.getByRole('contentinfo')).toContainText(footer);
   });
 
   test('hides the settings surface from an account that does not administrate', async ({

@@ -1,14 +1,19 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/field';
 import { FormError } from '@/components/ui/form-error';
 import { Sheet } from '@/components/ui/sheet';
+import { CampaignFields } from '@/components/links/campaign-fields';
+import { QrPanel } from '@/components/links/qr-panel';
+import { RulesEditor, type RoutingRule } from '@/components/links/rules-editor';
+import { Disclosure } from '@/components/ui/disclosure';
 import { apiRequest, type ApiFailure } from '@/lib/client-api';
+import type { CampaignPreset } from '@/lib/campaign';
 import type { DomainRecord, LinkRecord } from '@/lib/links';
 
 /**
@@ -22,17 +27,57 @@ export function LinkSheet({
   onOpenChange,
   domains,
   link,
+  presets = [],
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   domains: DomainRecord[];
   link: LinkRecord | null;
+  presets?: CampaignPreset[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<ApiFailure | null>(null);
 
   const editing = link !== null;
+
+  // Controlled, because the campaign builder edits this field rather than fields
+  // of its own — the URL is the single copy of those values.
+  const [destination, setDestination] = useState(link?.destination ?? '');
+  const [rules, setRules] = useState<RoutingRule[] | null>(null);
+
+  // Adjusted during render rather than in an effect. Resetting from an effect
+  // renders once with the previous link's destination before correcting itself,
+  // which is a visible flash of the wrong URL in a form someone is about to
+  // save.
+  const [shownFor, setShownFor] = useState(link);
+
+  if (shownFor !== link) {
+    setShownFor(link);
+    setDestination(link?.destination ?? '');
+    setRules(null);
+  }
+
+  // Rules are fetched when the sheet opens on an existing link rather than sent
+  // with the list: a list of a thousand links would carry every rule of every
+  // one of them to render a table that shows none.
+  useEffect(() => {
+    if (!open || link === null) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void apiRequest<{ rules: RoutingRule[] }>(`/api/v1/links/${link.id}/rules`).then((result) => {
+      if (!cancelled && result.ok) {
+        setRules(result.data.rules);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, link]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,7 +91,7 @@ export function LinkSheet({
     const password = String(data.get('password') ?? '');
 
     const body: Record<string, unknown> = {
-      destination: data.get('destination'),
+      destination,
       ...(editing ? {} : { domain: data.get('domain') === '' ? null : data.get('domain') }),
       slug: data.get('slug') === '' ? null : data.get('slug'),
       redirect_mode: data.get('redirect_mode') === '' ? null : data.get('redirect_mode'),
@@ -112,7 +157,8 @@ export function LinkSheet({
               inputMode="url"
               spellCheck={false}
               aria-describedby={describedBy}
-              defaultValue={link?.destination ?? ''}
+              value={destination}
+              onChange={(event) => setDestination(event.target.value)}
               required
             />
           )}
@@ -246,6 +292,30 @@ export function LinkSheet({
             />
           )}
         </Field>
+
+        <Disclosure label="Campaign parameters" testId="campaign-disclosure">
+          <CampaignFields
+            destination={destination}
+            onDestinationChange={setDestination}
+            presets={presets}
+          />
+        </Disclosure>
+
+        {editing ? (
+          <>
+            <Disclosure label="Routing rules" testId="rules-disclosure">
+              {rules === null ? (
+                <p className="text-ink-muted text-sm">Loading.</p>
+              ) : (
+                <RulesEditor linkId={link.id} initial={rules} />
+              )}
+            </Disclosure>
+
+            <Disclosure label="QR code" testId="qr-disclosure">
+              <QrPanel linkId={link.id} slug={link.slug} />
+            </Disclosure>
+          </>
+        ) : null}
 
         <div className="flex items-center gap-3">
           <Button intent="primary" size="md" type="submit" disabled={busy} data-testid="save-link">

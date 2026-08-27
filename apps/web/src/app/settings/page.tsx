@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { BrandingEditor } from '@/components/settings/branding-editor';
 import { DomainManager } from '@/components/settings/domain-manager';
+import { WebhookManager, type WebhookEndpoint } from '@/components/settings/webhook-manager';
 import { SettingsForm, type SettingsValues } from '@/components/settings/settings-form';
 import { Card, CardBody, CardHeader } from '@/components/ui/card';
 import { fetchPublicConfiguration } from '@/lib/api';
@@ -34,9 +35,10 @@ export default async function SettingsPage() {
     notFound();
   }
 
-  const [settings, domains] = await Promise.all([
+  const [settings, domains, webhooks] = await Promise.all([
     apiGet<{ settings: SettingsValues; geo: { databases_present: boolean } }>('/api/v1/settings'),
     apiGet<{ domains: DomainRecord[] }>('/api/v1/domains'),
+    apiGet<{ endpoints: WebhookEndpoint[]; events: string[] }>('/api/v1/webhooks'),
   ]);
 
   const values = settings.ok ? settings.data.settings : {};
@@ -179,6 +181,19 @@ export default async function SettingsPage() {
                 { key: 'mail.password', label: 'Password', kind: 'password' },
                 { key: 'mail.from_address', label: 'From address', kind: 'email' },
               ]}
+            />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Webhooks"
+            description="Where this instance sends events. Deliveries are signed and retried."
+          />
+          <CardBody>
+            <WebhookManager
+              endpoints={webhooks.ok ? webhooks.data.endpoints : []}
+              events={webhooks.ok ? webhooks.data.events : []}
             />
           </CardBody>
         </Card>

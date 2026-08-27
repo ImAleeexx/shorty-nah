@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Copy, MagnifyingGlass, Plus, Trash } from '@/components/icons';
+import { TransferControls } from '@/components/links/transfer-controls';
 import { LinkSheet } from '@/components/links/link-sheet';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -110,18 +111,22 @@ export function LinkTable({
         </div>
 
         {canWrite ? (
-          <Button
-            intent="primary"
-            size="md"
-            onClick={() => {
-              setEditing(null);
-              setOpen(true);
-            }}
-            data-testid="new-link"
-          >
-            <Plus size={15} />
-            New link
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <TransferControls domains={domains} />
+
+            <Button
+              intent="primary"
+              size="md"
+              onClick={() => {
+                setEditing(null);
+                setOpen(true);
+              }}
+              data-testid="new-link"
+            >
+              <Plus size={15} />
+              New link
+            </Button>
+          </div>
         ) : null}
       </div>
 
