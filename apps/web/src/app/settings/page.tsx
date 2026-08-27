@@ -66,6 +66,11 @@ export default async function SettingsPage() {
                 typeface: branding.typeface,
                 footer: branding.footer,
               }}
+              assets={{
+                logo: branding.logo,
+                wordmark: branding.wordmark,
+                favicon: branding.favicon,
+              }}
             />
           </CardBody>
         </Card>

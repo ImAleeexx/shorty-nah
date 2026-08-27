@@ -327,3 +327,74 @@ it('uploads a branding asset with a session older than the window', function ():
         ->post('/api/v1/branding/assets', ['kind' => 'logo', 'asset' => imageFile('logo.png')])
         ->assertCreated();
 });
+
+// --- assets: uploading, serving and clearing ---
+
+it('records an uploaded asset under a path the interface can serve', function (): void {
+    Storage::fake('public');
+
+    $admin = administrator();
+
+    $this->actingAs($admin)
+        ->post('/api/v1/branding/assets', ['kind' => 'logo', 'asset' => imageFile('logo.png')])
+        ->assertCreated();
+
+    $path = app(SettingsStore::class)->string('branding.logo_path');
+
+    // The interface refuses anything that is not under /storage/, so a path
+    // shaped differently would be dropped silently rather than rendered.
+    expect($path)->toStartWith('/storage/')
+        ->and($path)->not->toContain('..');
+
+    $this->getJson('/api/v1/config')
+        ->assertOk()
+        ->assertJsonPath('branding.logo', $path);
+});
+
+it('clears an asset and removes the file behind it', function (): void {
+    Storage::fake('public');
+
+    $admin = administrator();
+
+    $this->actingAs($admin)
+        ->post('/api/v1/branding/assets', ['kind' => 'logo', 'asset' => imageFile('logo.png')])
+        ->assertCreated();
+
+    $path = (string) app(SettingsStore::class)->string('branding.logo_path');
+    $stored = substr($path, strlen('/storage/'));
+
+    Storage::disk('public')->assertExists($stored);
+
+    $this->actingAs($admin)
+        ->deleteJson('/api/v1/branding/assets/logo')
+        ->assertOk()
+        ->assertJsonPath('branding.logo', null);
+
+    // The file goes with the reference: an asset nothing points at is an asset
+    // nobody will ever remove.
+    Storage::disk('public')->assertMissing($stored);
+});
+
+it('refuses to clear an asset kind it does not have', function (): void {
+    $this->actingAs(administrator())
+        ->deleteJson('/api/v1/branding/assets/banner')
+        ->assertStatus(404);
+});
+
+it('hides asset removal from an account that does not administrate', function (): void {
+    $member = User::factory()->create(['role' => Role::Member]);
+
+    $this->actingAs($member)
+        ->deleteJson('/api/v1/branding/assets/logo')
+        ->assertStatus(404);
+});
+
+it('clears an asset with a session older than the re-authentication window', function (): void {
+    Storage::fake('public');
+
+    $admin = User::factory()->staleAuthentication()->create(['role' => Role::Admin]);
+
+    $this->actingAs($admin)
+        ->deleteJson('/api/v1/branding/assets/logo')
+        ->assertOk();
+});

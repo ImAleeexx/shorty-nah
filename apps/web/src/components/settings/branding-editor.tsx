@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Warning } from '@/components/icons';
+import { AssetField } from '@/components/settings/asset-field';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/field';
 import { FormError } from '@/components/ui/form-error';
@@ -41,8 +42,10 @@ const TYPEFACE_LABELS: Record<string, string> = {
 
 export function BrandingEditor({
   initial,
+  assets,
 }: {
   initial: { name: string; accent: string; radius: number; typeface: string; footer: string };
+  assets: { logo: string | null; wordmark: string | null; favicon: string | null };
 }) {
   const router = useRouter();
   const [name, setName] = useState(initial.name);
@@ -232,6 +235,32 @@ export function BrandingEditor({
           />
         )}
       </Field>
+
+      {/* Assets save on selection rather than with the form below: an upload is
+          a request of its own, and holding a chosen file until someone presses
+          a button that says "Save branding" is how a logo gets silently lost. */}
+      <div className="border-border flex flex-col gap-5 border-t pt-5">
+        <AssetField
+          kind="logo"
+          label="Logo"
+          hint="Shown in the header when no wordmark is set. PNG, JPEG, WebP or GIF; SVG is refused, and the file is re-encoded before it is stored."
+          current={assets.logo}
+        />
+
+        <AssetField
+          kind="wordmark"
+          label="Wordmark"
+          hint="The horizontal lockup. Takes the header when present, in place of the logo and the instance name."
+          current={assets.wordmark}
+        />
+
+        <AssetField
+          kind="favicon"
+          label="Favicon"
+          hint="The browser tab icon. A square image reads best; anything else is letterboxed by the browser."
+          current={assets.favicon}
+        />
+      </div>
 
       <div>
         <Button

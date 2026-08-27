@@ -12,9 +12,21 @@ const DESTINATION = 'http://localhost:8080/sign-in';
 
 test.describe('interstitial mode', () => {
   test('renders the operator branding', async ({ page }) => {
+    // The hold page navigates on a timer the wizard sets to 600ms, so every
+    // assertion below was racing it — this passed until the suite grew enough to
+    // lose the race. Blocking the destination keeps the page where it is, which
+    // is what this test is actually about; the navigation itself is asserted by
+    // the tests that follow.
+    await page.route(DESTINATION, (route) => route.abort());
+
     await page.goto(SHORT_URL);
 
-    await expect(page.getByText('Externalia Links')).toBeVisible();
+    // The identity block, not the instance name specifically. The hold page
+    // renders an uploaded logo *instead of* the name, branding is instance-wide
+    // mutable state, and the suite runs fully in parallel — so asserting the
+    // text here made this test fail whenever another spec happened to be holding
+    // a logo. What matters is that the operator's identity is on the page.
+    await expect(page.locator('img.mark, p.name')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Taking you there' })).toBeVisible();
 
     // Branding reaches the page as CSS custom properties, so the accent and

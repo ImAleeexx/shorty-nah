@@ -78,7 +78,15 @@ RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin shortynah \
                 storage/logs \
                 bootstrap/cache \
     && chown -R shortynah:shortynah storage bootstrap/cache \
-    && chmod -R u+rwX storage bootstrap/cache
+    && chmod -R u+rwX storage bootstrap/cache \
+    # Uploaded branding assets are written to storage/app/public and referenced
+    # as /storage/..., which resolves only through this link. Made here rather
+    # than by `artisan storage:link` at boot because storage/app is a volume and
+    # public/ is not: the link lives in the image, so every container has it and
+    # no start-up step can forget it. Relative, so it survives the path changing.
+    && ln -sfn ../storage/app/public public/storage \
+    && mkdir -p storage/app/public \
+    && chown -R shortynah:shortynah storage/app
 
 USER shortynah
 

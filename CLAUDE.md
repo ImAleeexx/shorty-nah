@@ -147,6 +147,23 @@ job is pushed to Redis — and completely invisible under the sync queue driver 
 test suite uses. Every import failed with a `500` in a real browser while the
 whole API suite passed.
 
+**Branding assets need `public/storage`, and the dev bind mount eats it.** Uploads
+are written to `storage/app/public` and referenced as `/storage/...`, which
+resolves only through that symlink. It is created in the image *and* by the
+entrypoint, because the dev override bind-mounts the host tree over `/app` and
+replaces `public/` with a copy that has never had the link. Without it an upload
+succeeds, records a path, and serves a broken image.
+
+**`icon` is a reserved name in `src/app/`.** A route folder called `icon.svg` is
+shadowed by the metadata-file convention and answers `404`. The accent-derived
+default icon is served from `/brand-icon` for that reason.
+
+**Instance-wide branding is global state that browser tests share.** The suite is
+`fullyParallel`, so a spec that uploads a logo is holding it while unrelated
+specs run — and the interstitial renders a logo *instead of* the instance name.
+A test that asserts on branding text rather than on the identity element fails
+whenever the two overlap.
+
 **A route-level `loading.tsx` breaks every status code on that segment.** It puts
 the segment behind a Suspense boundary, so Next streams the response — and once
 the shell has flushed with a `200`, a `redirect()` or `notFound()` later in the
