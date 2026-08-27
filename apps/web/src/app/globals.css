@@ -82,6 +82,12 @@
   --duration-tooltip: 160ms;
   --duration-popover: 200ms;
   --duration-sheet: 260ms;
+
+  /* Exit is faster than entry: waiting to see something is tolerable, waiting
+     for something already dismissed is not. Seven tenths, matching
+     exitDuration() in lib/motion.ts, which its test now checks against this
+     value rather than against itself. */
+  --duration-sheet-exit: 182ms;
 }
 
 /*
@@ -160,29 +166,35 @@ body {
 }
 
 /*
- * Reduced motion means gentler, not none: opacity and colour still carry
- * meaning, movement is what causes discomfort.
+ * Reduced motion means gentler, not none.
+ *
+ * Movement is what causes discomfort; a colour or opacity change still carries
+ * meaning and still helps somebody follow what happened. So durations are left
+ * alone and the transforms are neutralised instead — which is the opposite of
+ * switching everything off and calling it accessible.
  */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
 
-/* Hover motion sits behind this everywhere: a tap fires hover on a touch device
-   and would leave an element stuck in its hovered state. */
-@media (hover: hover) and (pointer: fine) {
-  .hover-lift {
-    transition: box-shadow var(--duration-popover) var(--ease-out);
+  /* Nothing travels: entrances fade in place, the press feedback stops
+     shrinking, and the sheet arrives without sliding. */
+  .setup-step {
+    animation-name: setup-step-fade !important;
   }
 
-  .hover-lift:hover {
-    box-shadow: 0 2px 8px oklch(0 0 0 / 0.04);
+  .motion-travels,
+  .motion-travels[data-starting-style],
+  .motion-travels[data-ending-style] {
+    transform: none !important;
+  }
+
+  button:active {
+    transform: none !important;
   }
 }
 
@@ -198,6 +210,16 @@ body {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes setup-step-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }
 

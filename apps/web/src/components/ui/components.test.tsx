@@ -33,10 +33,13 @@ describe('Button', () => {
     expect(className).not.toContain('transition-all');
   });
 
-  it('takes a duration from the token layer', () => {
+  it('takes a duration from the token layer, through parentheses', () => {
     const { container } = render(<Button>Act</Button>);
 
-    expect(container.firstElementChild?.className).toContain('duration-[--duration-press]');
+    // The bracket form is Tailwind v3 and resolves to 0s in v4, so asserting it
+    // pinned every transition in the interface at zero. A lint rule now refuses
+    // it; this asserts the form that actually applies.
+    expect(container.firstElementChild?.className).toContain('duration-(--duration-press)');
   });
 });
 

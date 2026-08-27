@@ -36,7 +36,7 @@ export function Tooltip({ label, children }: { label: ReactNode; children: React
             className={cn(
               'border-border origin-(--transform-origin) rounded-(--radius-token-sm) border',
               'bg-surface-raised text-ink px-2 py-1 text-xs shadow-none',
-              'transition-[transform,opacity] duration-[--duration-tooltip] ease-(--ease-out)',
+              'transition-[transform,opacity] duration-(--duration-tooltip) ease-(--ease-out)',
               // Never from nothing: a tooltip that grows from zero looks like it
               // came out of the void.
               'data-[starting-style]:scale-95 data-[starting-style]:opacity-0',
