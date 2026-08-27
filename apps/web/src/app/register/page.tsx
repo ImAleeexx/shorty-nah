@@ -35,6 +35,7 @@ export default async function RegisterPage() {
 
   return (
     <AuthShell
+      branding={branding}
       title={`Join ${branding.name}`}
       description={
         mode === 'invite'
