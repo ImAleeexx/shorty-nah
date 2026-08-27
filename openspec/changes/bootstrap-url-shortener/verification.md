@@ -12,7 +12,7 @@ repository — not a thing that was awkward.
 | Capability | Scenarios | Proved by |
 |---|---|---|
 | `branding` | 17 | `BrandingTest`, `PublicConfigurationTest`; `e2e/foundation.spec.ts`, `e2e/settings.spec.ts`; `src/lib/color.test.ts`, `src/lib/branding.test.ts` |
-| `click-analytics` | 21 | `ClickPipelineTest`, `ClickEnrichmentTest`, `ClickHouseConnectionTest`, `AnalyticsReportingTest`, `InterstitialTest`; `e2e/analytics.spec.ts`, `e2e/interstitial.spec.ts` |
+| `click-analytics` | 21 | `ClickPipelineTest`, `ClickEnrichmentTest`, `GeoResolutionTest`, `ClickHouseConnectionTest`, `AnalyticsReportingTest`, `InterstitialTest`; `e2e/analytics.spec.ts`, `e2e/interstitial.spec.ts` |
 | `deployment` | 19 | `VerifyEnvironmentTest`, `HealthTest`, `ClickHouseMigrateTest`; `scripts/verify-clean-host.sh`, `verify-schema-ordering.sh`, `verify-graceful-shutdown.sh`, `verify-restore.sh`, `check-published-ports.sh`, `check-image-secrets.sh`, `check-image-pins.sh` |
 | `domains` | 9 | `DomainTest`, `LinkSlugTest`, `RedirectHotPathTest` |
 | `identity` | 35 | `AuthenticationTest`, `SessionLifecycleTest`, `RegistrationModeTest`, `RoleAuthorizationTest`, `IssuedSecretTest`, `TwoFactorTest`; `e2e/auth.spec.ts`, `e2e/people.spec.ts`, `e2e/passkey.spec.ts` |
@@ -23,8 +23,13 @@ repository — not a thing that was awkward.
 
 ## Deliberate exceptions
 
-Three. Each needs something this repository cannot contain, and each names what
+Two. Each needs something this repository cannot contain, and each names what
 would close it.
+
+Geographic resolution used to be a third. It is now proved against the real
+GeoLite2 databases by `GeoResolutionTest`, which reads what the sidecar
+downloads and skips where they are absent — an instance without a MaxMind
+licence is a supported configuration, not a broken one.
 
 ### Certificate issuance on first request — `deployment`
 
@@ -50,19 +55,6 @@ in a test that finishes. The configuration that governs it is validated
 
 **Closes when** an instance has been running long enough to renew, on the same
 public host as above.
-
-### Geographic resolution against a real database — `click-analytics`
-
-> **WHEN** an address resolves
-> **THEN** the click is recorded with its country and network
-
-The GeoLite2 databases need a MaxMind licence key, which this instance has none
-configured for. What is proved instead: the unresolved and missing-database cases
-degrade to non-geographic while still recording the click, and the resolved path
-is asserted against a stubbed resolver that also counts lookups — which is what
-proves filtered traffic pays for none (`ClickEnrichmentTest`, task 10.4).
-
-**Closes when** a licence key is configured on a deployed instance.
 
 ## Not exceptions, though they look like ones
 

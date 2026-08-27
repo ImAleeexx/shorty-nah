@@ -691,7 +691,7 @@ function StepBody({
 
         <Field
           label="MaxMind account ID"
-          hint="Optional. Without a licence, geography is simply absent rather than wrong."
+          hint="Optional, and kept here for reference only. The updater that downloads the databases reads MAXMIND_ACCOUNT_ID and MAXMIND_LICENSE_KEY from the environment, because it runs before this instance exists."
           error={first(errors, 'maxmind_account_id')}
         >
           {({ id, describedBy }) => (

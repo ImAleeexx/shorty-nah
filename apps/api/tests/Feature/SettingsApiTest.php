@@ -137,3 +137,13 @@ it('reports a value stored as null as unconfigured rather than configured', func
     expect($settings->has('mail.password'))->toBeFalse()
         ->and($response->json('settings')['mail.password'])->toBeNull();
 });
+
+it('reports whether geography is actually working, not whether a key was typed', function (): void {
+    $response = $this->actingAs(settingsApiAdmin())->getJson('/api/v1/settings')->assertOk();
+
+    // A licence key in the settings store drives nothing: the updater that
+    // downloads the databases reads its credentials from the environment,
+    // because it runs before this instance is installed. Reporting on the key
+    // would tell an operator geography works when it does not.
+    expect($response->json('geo.databases_present'))->toBeBool();
+});

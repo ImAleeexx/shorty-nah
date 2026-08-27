@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Audit\AuditAction;
 use App\Audit\AuditLog;
+use App\Clicks\GeoResolver;
 use App\Models\User;
 use App\Settings\Setting;
 use App\Settings\SettingsRegistry;
@@ -37,7 +38,7 @@ final class SettingsController
         'mail.port' => ['min' => 1, 'max' => 65535],
     ];
 
-    public function show(Request $request, SettingsStore $settings): JsonResponse
+    public function show(Request $request, SettingsStore $settings, ?GeoResolver $geo = null): JsonResponse
     {
         if (! $this->administrates($request)) {
             return new JsonResponse(status: 404);
@@ -54,6 +55,13 @@ final class SettingsController
 
         return new JsonResponse([
             'settings' => $values,
+            // Whether geography is actually working, which is not the same
+            // question as whether a licence key was typed in: the sidecar that
+            // downloads the databases reads its credentials from the
+            // environment, because it runs before this application is installed.
+            'geo' => [
+                'databases_present' => ! ($geo ?? app(GeoResolver::class))->missingDatabases(),
+            ],
             'schema' => array_map(
                 static fn (Setting $setting): array => [
                     'type' => $setting->type->value,
