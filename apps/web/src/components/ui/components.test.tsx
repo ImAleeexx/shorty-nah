@@ -27,7 +27,12 @@ describe('Button', () => {
     const { container } = render(<Button>Act</Button>);
     const className = container.firstElementChild?.className ?? '';
 
-    expect(className).toContain('transition-[transform,background-color,border-color,color]');
+    // box-shadow is named too, because elevation is now part of what a control
+    // changes on hover and press — an unnamed property is a property that does
+    // not animate.
+    expect(className).toContain(
+      'transition-[transform,background-color,border-color,color,box-shadow]',
+    );
     /* eslint-disable-next-line no-restricted-syntax -- the assertion that keeps
        transition-all out of the components has to name it to look for it. */
     expect(className).not.toContain('transition-all');
@@ -44,7 +49,7 @@ describe('Button', () => {
 });
 
 describe('Card', () => {
-  it('renders a hairline border and no shadow class', () => {
+  it('separates itself by elevation from the token layer, not by a border', () => {
     const { container } = render(
       <Card>
         <CardHeader title="Links" description="All of them" />
@@ -54,8 +59,19 @@ describe('Card', () => {
 
     const className = container.firstElementChild?.className ?? '';
 
-    expect(className).toContain('border-border');
-    expect(className).not.toMatch(/shadow-(sm|md|lg|xl)/);
+    // This test used to assert the opposite — a hairline border and no shadow.
+    // The direction changed: a card is now separated by elevation, and carrying
+    // both a line and a shadow is what makes one look like an outline drawn
+    // round a photograph of itself.
+    expect(className).toContain('shadow-(--shadow-card)');
+    expect(className).not.toContain('border-border');
+
+    // The ban on Tailwind's stock shadows survives the change, and means more
+    // now than it did: those are untinted black at low opacity, which is the
+    // grey haze this system exists to avoid. Every shadow here comes from a
+    // token that carries the canvas hue.
+    expect(className).not.toMatch(/shadow-(sm|md|lg|xl|2xl)\b/);
+
     expect(screen.getByText('Links')).toBeInTheDocument();
     expect(screen.getByText('All of them')).toBeInTheDocument();
   });

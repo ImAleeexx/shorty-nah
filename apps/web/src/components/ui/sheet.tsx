@@ -35,7 +35,7 @@ export function Sheet({
       <Dialog.Portal>
         <Dialog.Backdrop
           className={cn(
-            'bg-ink/20 fixed inset-0 z-40',
+            'bg-ink/25 fixed inset-0 z-40',
             'transition-opacity duration-(--duration-sheet) ease-(--ease-out)',
             'data-[ending-style]:duration-(--duration-sheet-exit)',
             'data-[ending-style]:opacity-0 data-[starting-style]:opacity-0',
@@ -44,7 +44,9 @@ export function Sheet({
         <Dialog.Popup
           className={cn(
             'fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col',
-            'border-border bg-surface border-l',
+            // The one surface that genuinely floats above everything, so it
+            // takes the overlay level rather than the raised one.
+            'bg-surface shadow-(--shadow-overlay)',
             'motion-travels transition-transform duration-(--duration-sheet) ease-(--ease-drawer)',
             // Exit is faster than entry, and along the same edge it came from.
             'data-[ending-style]:duration-(--duration-sheet-exit)',
@@ -53,7 +55,7 @@ export function Sheet({
             'data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full',
           )}
         >
-          <div className="border-border border-b px-6 py-4">
+          <div className="border-border/70 border-b px-6 py-4">
             <Dialog.Title className="text-ink text-sm font-semibold tracking-tight">
               {title}
             </Dialog.Title>

@@ -39,7 +39,9 @@ export function AppShell({
           Skip to content
         </a>
 
-        <header className="border-border bg-surface border-b">
+        {/* The header sits above the page rather than being ruled off from it,
+            which is the same separation every other surface now uses. */}
+        <header className="bg-surface relative z-30 shadow-(--shadow-raised)">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
             {/* The wordmark takes the header when there is one: it is the
                 horizontal lockup, and it already carries the name. The logo is
@@ -76,7 +78,10 @@ export function AppShell({
         <main
           id="content"
           tabIndex={-1}
-          className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 md:px-8 md:py-10"
+          // Bottom runs longer than top, deliberately. Equal padding measures
+          // equal and looks top-heavy, because the header rule above already
+          // reads as weight on that edge.
+          className="mx-auto w-full max-w-7xl flex-1 px-4 pt-8 pb-12 md:px-8 md:pt-10 md:pb-16"
         >
           {children}
         </main>

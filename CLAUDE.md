@@ -401,11 +401,21 @@ beacon. TDD per `superpowers:test-driven-development` — test first.
 
 ### Frontend design
 
-The visual direction is settled — see `openspec/changes/bootstrap-url-shortener/design.md`, Interface
-direction. **Premium utilitarian minimalism**: warm monochrome, hairline `1px` borders, crisp `8–12px`
-radii, effectively no shadows, asymmetric bento grid, colour as a scarce resource. The agency direction
-(double-bezel enclosures, `rounded-[2rem]`, glass blur, ambient orbs, scroll reveals everywhere) was
-considered and **rejected** for the dashboard; do not reintroduce it piecemeal.
+The visual direction is **soft depth** — see `openspec/changes/bootstrap-url-shortener/design.md`,
+Interface direction. A surface is separated from its ground by elevation, not by a line: cool-tinted
+neutrals in one hue family, no border on a raised surface, two shadows per level (tight contact under
+wider ambient, both cast straight down), radii derived from one operator value at `radius ± 4`.
+
+Two rules that are easy to get wrong. **Shadows carry the canvas hue** — Tailwind's stock shadows are
+untinted black and are still banned, and elevation comes from `--shadow-card`/`-raised`/`-overlay`/`-inset`
+rather than a utility or an inline value. **Dark mode does not use shadow for elevation** — shadow
+separates nothing against a dark ground, so a raised surface there is a lighter fill plus a one-pixel
+inset top highlight (`--elevation-edge`, which resolves to nothing in light mode).
+
+This replaced *premium utilitarian minimalism* (hairline borders, no shadows) after the owner reviewed it
+in use. The agency direction (double-bezel enclosures, `rounded-[2rem]`, glass blur, ambient orbs, scroll
+reveals everywhere) remains **rejected**; do not reintroduce it piecemeal. The bento grid, layout
+stability, motion frequency gate, single-accent branding, typeface and icon rules are all unchanged.
 
 Banned outright: Inter, Roboto, Helvetica, Open Sans. Lucide, Feather, Material, FontAwesome. Emoji in
 markup, copy, or alt text. Gradients, neon, glassmorphism, `rounded-full` on large containers or primary

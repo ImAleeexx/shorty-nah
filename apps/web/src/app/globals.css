@@ -37,6 +37,19 @@
   --ease-out: var(--motion-ease-out);
   --ease-in-out: var(--motion-ease-in-out);
   --ease-drawer: var(--motion-ease-drawer);
+  --ease-spring: var(--motion-ease-spring);
+
+  /* Elevation is this system's unit of separation, so it is a token like any
+     other. Tailwind's stock shadows are untinted black at low opacity, which is
+     the grey haze that makes an interface look unfinished — these carry the
+     canvas hue, so a card sits in the page rather than on a photograph of it. */
+  --shadow-raised: var(--elevation-raised);
+
+  /* Edge and shadow composed, so a raised surface is one class rather than a
+     class plus an inline style fighting over the same property. */
+  --shadow-card: var(--elevation-edge), var(--elevation-raised);
+  --shadow-overlay: var(--elevation-overlay);
+  --shadow-inset: var(--elevation-inset);
 }
 
 /*
@@ -45,19 +58,40 @@
  * query does not match.
  */
 :root {
-  /* Warm monochrome, never pure white or pure black. */
-  --canvas: oklch(0.985 0.002 90);
+  /*
+   * One neutral family, tinted cool. Every grey here carries hue 265 — mixing a
+   * warm grey with a cool one is the commonest way a palette starts to look
+   * accidental, and it is invisible until the two sit side by side.
+   */
+  --canvas: oklch(0.975 0.004 265);
   --surface: oklch(1 0 0);
-  --surface-raised: oklch(0.995 0.001 90);
-  --border: oklch(0.922 0.003 90);
-  --border-strong: oklch(0.865 0.004 90);
-  --ink: oklch(0.205 0.004 90);
-  --ink-muted: oklch(0.52 0.006 90);
-  --ink-subtle: oklch(0.66 0.005 90);
+  --surface-raised: oklch(1 0 0);
+  --border: oklch(0.925 0.005 265);
+  --border-strong: oklch(0.87 0.007 265);
+  --ink: oklch(0.2 0.008 265);
+  --ink-muted: oklch(0.5 0.01 265);
+  --ink-subtle: oklch(0.64 0.008 265);
 
-  --positive: oklch(0.52 0.11 150);
-  --caution: oklch(0.62 0.12 75);
-  --critical: oklch(0.55 0.17 25);
+  /*
+   * Two shadows per level, not one. A single wide blur reads as fog; a tight
+   * contact shadow under a wider ambient one reads as an object above a
+   * surface. Both fall straight down, so every card in the interface agrees
+   * about where the light is.
+   */
+  --elevation-raised:
+    0 1px 2px oklch(0.2 0.03 265 / 0.06), 0 8px 24px -6px oklch(0.2 0.03 265 / 0.09);
+  --elevation-overlay:
+    0 4px 10px oklch(0.2 0.03 265 / 0.08), 0 24px 56px -12px oklch(0.2 0.03 265 / 0.18);
+  --elevation-inset: inset 0 1px 2px oklch(0.2 0.03 265 / 0.07);
+
+  /* Nothing in light mode: a white card on a near-white canvas has no lit edge
+     to catch. It earns its keep in dark, where shadow separates nothing and the
+     top edge does the work instead. */
+  --elevation-edge: 0 0 transparent;
+
+  --positive: oklch(0.55 0.12 155);
+  --caution: oklch(0.64 0.13 75);
+  --critical: oklch(0.56 0.18 25);
 
   /* Overwritten per request by the server with the operator's choice. Every
      derived state is computed from it, so an accent picker needs one input. */
@@ -67,7 +101,10 @@
   --accent-muted: oklch(from var(--accent) 0.96 calc(c * 0.22) h);
   --accent-contrast: oklch(0.99 0 0);
 
-  --radius: 10px;
+  /* Cards resolve to radius + 4 and inner controls to radius - 4, so one
+     operator-set value keeps a nested stack in proportion rather than making
+     every corner identical. */
+  --radius: 12px;
 
   /* Curves are tokens, never written inline. The built-in easings are too weak
      to read as deliberate, and ease-in delays the first moment a viewer is
@@ -76,10 +113,16 @@
   --motion-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --motion-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
+  /* Overshoots, so it belongs on the return rather than the departure: a press
+     goes down on ease-out and comes back on this, which is what reads as a
+     physical release. Applied the other way round it undershoots past the
+     target and the control looks broken. */
+  --motion-ease-spring: cubic-bezier(0.34, 1.42, 0.64, 1);
+
   /* Durations by surface frequency. A dashboard is opened many times a day, so
      these are short by design. */
-  --duration-press: 140ms;
-  --duration-tooltip: 160ms;
+  --duration-press: 150ms;
+  --duration-tooltip: 170ms;
   --duration-popover: 200ms;
   --duration-sheet: 260ms;
 
@@ -96,18 +139,26 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --canvas: oklch(0.165 0.003 90);
-    --surface: oklch(0.205 0.003 90);
-    --surface-raised: oklch(0.235 0.003 90);
-    --border: oklch(0.29 0.004 90);
-    --border-strong: oklch(0.36 0.005 90);
-    --ink: oklch(0.955 0.002 90);
-    --ink-muted: oklch(0.72 0.005 90);
-    --ink-subtle: oklch(0.58 0.005 90);
+    --canvas: oklch(0.17 0.008 265);
+    --surface: oklch(0.215 0.009 265);
+    --surface-raised: oklch(0.25 0.01 265);
+    --border: oklch(0.3 0.011 265);
+    --border-strong: oklch(0.38 0.012 265);
+    --ink: oklch(0.96 0.004 265);
+    --ink-muted: oklch(0.72 0.009 265);
+    --ink-subtle: oklch(0.58 0.009 265);
 
-    --positive: oklch(0.72 0.13 150);
-    --caution: oklch(0.78 0.13 75);
-    --critical: oklch(0.7 0.16 25);
+    /* Shadow separates nothing against a dark canvas, so elevation is carried
+       by a lighter fill and a lit top edge. The shadows stay, deeper, for the
+       overlays that genuinely float. */
+    --elevation-raised: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px -6px oklch(0 0 0 / 0.36);
+    --elevation-overlay: 0 4px 10px oklch(0 0 0 / 0.4), 0 24px 56px -12px oklch(0 0 0 / 0.55);
+    --elevation-inset: inset 0 1px 2px oklch(0 0 0 / 0.35);
+    --elevation-edge: inset 0 1px 0 oklch(1 0 0 / 0.07);
+
+    --positive: oklch(0.74 0.13 155);
+    --caution: oklch(0.79 0.13 75);
+    --critical: oklch(0.71 0.16 25);
 
     --accent-hover: oklch(from var(--accent) calc(l + 0.06) c h);
     --accent-active: oklch(from var(--accent) calc(l + 0.11) c h);
@@ -118,18 +169,26 @@
 
 /* Redefined again so an explicit dark choice wins in both directions. */
 :root[data-theme='dark'] {
-  --canvas: oklch(0.165 0.003 90);
-  --surface: oklch(0.205 0.003 90);
-  --surface-raised: oklch(0.235 0.003 90);
-  --border: oklch(0.29 0.004 90);
-  --border-strong: oklch(0.36 0.005 90);
-  --ink: oklch(0.955 0.002 90);
-  --ink-muted: oklch(0.72 0.005 90);
-  --ink-subtle: oklch(0.58 0.005 90);
+  --canvas: oklch(0.17 0.008 265);
+  --surface: oklch(0.215 0.009 265);
+  --surface-raised: oklch(0.25 0.01 265);
+  --border: oklch(0.3 0.011 265);
+  --border-strong: oklch(0.38 0.012 265);
+  --ink: oklch(0.96 0.004 265);
+  --ink-muted: oklch(0.72 0.009 265);
+  --ink-subtle: oklch(0.58 0.009 265);
 
-  --positive: oklch(0.72 0.13 150);
-  --caution: oklch(0.78 0.13 75);
-  --critical: oklch(0.7 0.16 25);
+  /* Shadow separates nothing against a dark canvas, so elevation is carried by
+     a lighter fill and a lit top edge. The shadows stay, deeper, for the
+     overlays that genuinely float. */
+  --elevation-raised: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px -6px oklch(0 0 0 / 0.36);
+  --elevation-overlay: 0 4px 10px oklch(0 0 0 / 0.4), 0 24px 56px -12px oklch(0 0 0 / 0.55);
+  --elevation-inset: inset 0 1px 2px oklch(0 0 0 / 0.35);
+  --elevation-edge: inset 0 1px 0 oklch(1 0 0 / 0.07);
+
+  --positive: oklch(0.74 0.13 155);
+  --caution: oklch(0.79 0.13 75);
+  --critical: oklch(0.71 0.16 25);
 
   --accent-hover: oklch(from var(--accent) calc(l + 0.06) c h);
   --accent-active: oklch(from var(--accent) calc(l + 0.11) c h);

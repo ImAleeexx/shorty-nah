@@ -236,9 +236,34 @@ container restart. Installation state is a setting too, and it gates the setup r
 Two credible directions were available and they contradict each other, so this picks one outright rather
 than averaging them into mush.
 
-**Chosen — premium utilitarian minimalism.** Warm monochrome canvas, hairline `1px` structural borders,
-crisp `8–12px` radii, effectively no shadows, asymmetric bento grid, generous internal padding, extreme
-typographic contrast, colour as a scarce resource.
+**Superseded — premium utilitarian minimalism.** Warm monochrome canvas, hairline `1px` structural
+borders, crisp `8–12px` radii, effectively no shadows, asymmetric bento grid, generous internal padding,
+extreme typographic contrast, colour as a scarce resource. This was the direction until the owner reviewed
+it in use and was not convinced; **the current direction is soft depth, recorded below.** The reasoning
+against the agency direction that follows still holds and is why soft depth was chosen over it.
+
+**Current — soft depth.** A surface is separated from its ground by *elevation* rather than by a line.
+Cool-tinted neutrals in one hue family, no border on a raised surface, two shadows per level — a tight
+contact shadow under a wider ambient one — both cast straight down so every card agrees where the light
+is. Radii derive from one operator value: cards at `radius + 4`, inner controls at `radius - 4`.
+
+Three things make it work rather than merely look modern:
+
+- **Shadows carry the canvas hue.** Tailwind's stock shadows are untinted black at low opacity, which is
+  the grey haze that makes an interface look unfinished. A tinted shadow sits a card *in* the page rather
+  than on a photograph of it. The ban on `shadow-md`/`lg`/`xl` therefore survives the change and means
+  more than it did.
+- **Dark mode does not use shadow for elevation.** Shadow separates nothing against a dark ground. There,
+  a raised surface is a lighter fill plus a one-pixel inset highlight along its top edge — the same light
+  source, read the other way round. `--elevation-edge` is that value, and it resolves to nothing in light
+  mode, where a white card on a near-white canvas has no lit edge to catch.
+- **The press is asymmetric.** Down runs on `--ease-out`; the return runs on `--ease-spring`, which
+  overshoots slightly. The curves are the opposite way round from what reads naturally in a stylesheet:
+  an overshoot on the way *down* pushes past the target and the control looks broken.
+
+What did *not* change, because it was never the problem: the bento grid, layout stability, the motion
+frequency gate, runtime branding from a single accent, the typeface and icon rules, and every
+accessibility contract.
 
 **Rejected — the high-end agency direction**: double-bezel nested enclosures, `rounded-[2rem]` squircles,
 pill CTAs with button-in-button icons, glass `backdrop-blur`, ambient gradient orbs, 800ms blur-fade scroll
@@ -253,9 +278,10 @@ reveals. It is the better choice for a landing page and the wrong choice here:
 - Its 800ms scroll-entry reveals fail the motion frequency gate below on exactly the surfaces an operator
   visits most.
 
-Minimalism also happens to be what runtime branding can actually deliver: a flat monochrome system with a
-single accent has one degree of freedom, and one degree of freedom is what an operator picker can safely
-expose.
+Soft depth keeps the property that made minimalism workable here: one degree of freedom. Every colour is
+still derived from a single accent, and the elevation tokens are fixed neutrals tinted with the canvas
+hue — so they do not shift when an operator changes the accent, and nothing needs hand-tuning per palette.
+That is the line between this and the agency direction, which needs a designer per theme.
 
 Where the agency direction is right — the interstitial hold page and the setup wizard, both seen rarely —
 those surfaces are allowed more visual ambition and are the only places scroll-entry motion appears.
@@ -268,7 +294,9 @@ Hard constraints, enforced in review:
 - **Icons**: Phosphor at one standardized weight — Regular for the interface, Bold reserved for
   active/selected state. Never Lucide, Feather, Material, or FontAwesome. Never emoji, anywhere.
 - **No** gradients, neon, glassmorphism, `rounded-full` on large containers or primary buttons, primary-
-  coloured section backgrounds, or Tailwind's stock `shadow-md`/`lg`/`xl`.
+  coloured section backgrounds, or Tailwind's stock `shadow-md`/`lg`/`xl`. Elevation comes from
+  `--shadow-card`, `--shadow-raised`, `--shadow-overlay` and `--shadow-inset`, never from a stock utility
+  and never from an inline value.
 - Mono is not decorative here. A slug is an identifier a person transcribes and compares character by
   character, so `0`/`O` and `1`/`l` must be visually distinct.
 

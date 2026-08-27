@@ -12,7 +12,10 @@ import { cn } from '@/lib/cn';
  */
 export function BentoGrid({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('grid grid-cols-1 gap-4 md:grid-cols-12 md:gap-5', className)} {...props} />
+    // Wider gutters than a bordered grid needs. A shadow has to fall somewhere:
+    // cells set too close overlap each other's ambient shadow and the whole grid
+    // reads as one smudged panel rather than as separate objects.
+    <div className={cn('grid grid-cols-1 gap-5 md:grid-cols-12 md:gap-6', className)} {...props} />
   );
 }
 
