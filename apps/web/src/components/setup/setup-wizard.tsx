@@ -63,7 +63,13 @@ const STEP_ORDER: SetupStep[] = [
   'mail',
 ];
 
-const TYPEFACES = ['geist', 'inter-tight', 'satoshi'] as const;
+// The faces this instance carries. Offering any other produced a validation
+// error, because the API refuses what it cannot render.
+const TYPEFACES: { value: string; label: string }[] = [
+  { value: 'geist', label: 'Geist' },
+  { value: 'geist-mono', label: 'Geist Mono' },
+  { value: 'instrument-serif', label: 'Instrument Serif' },
+];
 
 type Phase = 'loading' | 'gate' | 'wizard' | 'installed';
 
@@ -639,8 +645,8 @@ function StepBody({
               defaultValue={values?.typeface ?? 'geist'}
             >
               {TYPEFACES.map((face) => (
-                <option key={face} value={face}>
-                  {face}
+                <option key={face.value} value={face.value}>
+                  {face.label}
                 </option>
               ))}
             </Select>

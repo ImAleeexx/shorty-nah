@@ -12,6 +12,7 @@ export type Branding = {
   logo: string | null;
   wordmark: string | null;
   favicon: string | null;
+  footer: string;
 };
 
 export type PublicConfiguration = {
@@ -25,6 +26,9 @@ export type PublicConfiguration = {
     logo: string | null;
     wordmark: string | null;
     favicon: string | null;
+    // Optional: a client should still render against an instance whose API
+    // predates this field rather than failing to parse the response.
+    footer?: string | null;
   };
 };
 
@@ -36,6 +40,7 @@ export const DEFAULT_BRANDING: Branding = {
   logo: null,
   wordmark: null,
   favicon: null,
+  footer: '',
 };
 
 /** Bounds mirrored from the API so a hostile response cannot break the layout. */
@@ -43,6 +48,26 @@ export const RADIUS_MIN = 4;
 export const RADIUS_MAX = 14;
 
 const ACCENT_PATTERN = /^oklch\(\s*[\d.]+\s+[\d.]+\s+[\d.]+\s*\)$/;
+
+/**
+ * The faces this instance actually carries, and the stack each one resolves to.
+ *
+ * Mirrored from BrandingBounds. A selector offering a face the API refuses is
+ * worse than no selector, and a face the API accepts but the document never
+ * applies is only slightly better — the choice has to reach the rendered page.
+ */
+export const TYPEFACE_STACKS: Record<string, string> = {
+  geist: 'var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif',
+  'geist-mono': 'var(--font-geist-mono), ui-monospace, monospace',
+  'instrument-serif': 'var(--font-editorial), Georgia, ui-serif, serif',
+};
+
+export const DEFAULT_TYPEFACE = 'geist';
+
+/** The stack for a chosen face, falling back rather than rendering nothing. */
+export function typefaceStack(typeface: string | null): string {
+  return TYPEFACE_STACKS[typeface ?? ''] ?? TYPEFACE_STACKS[DEFAULT_TYPEFACE]!;
+}
 
 /**
  * The API validates these already. Re-checking here is not redundant: this value
@@ -56,6 +81,7 @@ export function sanitiseBranding(config: PublicConfiguration | null): Branding {
 
   const accent = config.branding.accent;
   const radius = config.branding.radius;
+  const typeface = config.branding.typeface ?? '';
 
   return {
     name: config.instance.name?.slice(0, 80) || DEFAULT_BRANDING.name,
@@ -65,10 +91,14 @@ export function sanitiseBranding(config: PublicConfiguration | null): Branding {
       typeof radius === 'number' && Number.isFinite(radius)
         ? Math.min(Math.max(Math.round(radius), RADIUS_MIN), RADIUS_MAX)
         : DEFAULT_BRANDING.radius,
-    typeface: config.branding.typeface ?? DEFAULT_BRANDING.typeface,
+    // Only a face this instance actually carries. An unknown one would resolve
+    // to nothing and the page would render in the browser's default.
+    typeface: typeface in TYPEFACE_STACKS ? typeface : DEFAULT_BRANDING.typeface,
     logo: assetPath(config.branding.logo),
     wordmark: assetPath(config.branding.wordmark),
     favicon: assetPath(config.branding.favicon),
+    // Operator copy, so it is trimmed and bounded but otherwise left alone.
+    footer: (config.branding.footer ?? '').slice(0, 200),
   };
 }
 

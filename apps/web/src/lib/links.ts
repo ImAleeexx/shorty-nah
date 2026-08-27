@@ -4,8 +4,8 @@ export type LinkRecord = {
   destination: string;
   domain: string | null;
   short_url: string | null;
-  redirect_mode: 'direct' | 'interstitial' | null;
-  effective_redirect_mode: 'direct' | 'interstitial';
+  redirect_mode: 'direct' | 'interstitial' | 'invisible' | null;
+  effective_redirect_mode: 'direct' | 'interstitial' | 'invisible';
   password_protected: boolean;
   expires_at: string | null;
   max_clicks: number | null;

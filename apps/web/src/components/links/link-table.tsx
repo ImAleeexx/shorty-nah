@@ -1,7 +1,7 @@
 'use client';
 
 import NextLink from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -31,11 +31,14 @@ export function LinkTable({
   canWrite: boolean;
 }) {
   const router = useRouter();
+  const params = useSearchParams();
   const [search, setSearch] = useState('');
   const [domain, setDomain] = useState('');
   const [tag, setTag] = useState('');
   const [editing, setEditing] = useState<LinkRecord | null>(null);
-  const [open, setOpen] = useState(false);
+  // Opened on arrival when another page asked for it. The sheet lives here
+  // because this is the list that has to refresh once a link exists.
+  const [open, setOpen] = useState(params.get('new') === '1');
 
   const tags = useMemo(
     () => [...new Set(initial.flatMap((link) => link.tags))].sort((a, b) => a.localeCompare(b)),
@@ -227,9 +230,9 @@ export function LinkTable({
                   {link.password_protected ? (
                     <span className="text-ink-subtle text-xs">password</span>
                   ) : null}
-                  {link.effective_redirect_mode === 'interstitial' ? (
-                    <span className="text-ink-subtle text-xs">interstitial</span>
-                  ) : null}
+                  {link.effective_redirect_mode === 'direct' ? null : (
+                    <span className="text-ink-subtle text-xs">{link.effective_redirect_mode}</span>
+                  )}
                 </div>
                 <p className="text-ink-muted mt-0.5 truncate text-xs">{link.destination}</p>
                 {link.tags.length > 0 ? (

@@ -122,6 +122,17 @@ final class SettingsRegistry
             new Setting('branding.wordmark_path', SettingType::String, null, exposed: true),
             new Setting('branding.favicon_path', SettingType::String, null, exposed: true),
 
+            // Shown at the foot of every page, including before anyone signs
+            // in, so it is exposed like the rest of branding. Free text: what
+            // an operator wants to say there is their business, and an empty
+            // value renders nothing at all.
+            new Setting(
+                'branding.footer_text',
+                SettingType::String,
+                'Made by ImAleex_ with ❤️',
+                exposed: true,
+            ),
+
             // --- Domains. Operational: the addresses a registered domain must
             // resolve to for verification to succeed. ---
             new Setting('domains.instance_addresses', SettingType::String),
@@ -131,7 +142,7 @@ final class SettingsRegistry
                 'redirect.default_mode',
                 SettingType::String,
                 'direct',
-                allowed: ['direct', 'interstitial'],
+                allowed: ['direct', 'interstitial', 'invisible'],
                 writable: true,
             ),
             new Setting('redirect.interstitial_delay_ms', SettingType::Integer, 1200, writable: true),

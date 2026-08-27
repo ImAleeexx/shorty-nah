@@ -61,6 +61,7 @@ export default async function SettingsPage() {
                 accent: branding.accent,
                 radius: branding.radius,
                 typeface: branding.typeface,
+                footer: branding.footer,
               }}
             />
           </CardBody>
@@ -147,6 +148,7 @@ export default async function SettingsPage() {
                   choices: [
                     { value: 'direct', label: 'Direct' },
                     { value: 'interstitial', label: 'Interstitial' },
+                    { value: 'invisible', label: 'Invisible' },
                   ],
                 },
                 {
