@@ -37,7 +37,7 @@ jobs:
           --health-retries 12
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -125,7 +125,7 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         with:
@@ -163,7 +163,7 @@ jobs:
     name: Containers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Base images are digest-pinned
         run: ./scripts/check-image-pins.sh
@@ -203,7 +203,7 @@ jobs:
     name: Supply chain
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # Secret scanning reads history: a credential removed in a later
           # commit is still a leaked credential.
@@ -253,7 +253,7 @@ jobs:
     name: Browser
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         with:
