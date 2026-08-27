@@ -171,6 +171,12 @@ test.describe('design foundation', () => {
 
     await page.goto(APP);
 
+    // An unauthenticated visit lands on sign-in. Waiting for its control before
+    // measuring is the point: page.evaluate does not wait for anything, so
+    // without this the search below runs against whatever has rendered so far
+    // and finds nothing.
+    await expect(page.getByTestId('sign-in')).toBeVisible();
+
     const observed = await page.evaluate(() => {
       // A button that actually declares a transition. Taking the first in the
       // DOM measures whichever element happens to lead, which may declare none
@@ -225,9 +231,14 @@ test.describe('design foundation', () => {
   test('keeps press feedback short enough to feel immediate', async ({ page }) => {
     await page.goto(APP);
 
-    const duration = await page
-      .locator('button', { hasText: 'New link' })
-      .evaluate((node) => getComputedStyle(node).transitionDuration);
+    // Located by name, not by tag: the overview's New link is an anchor styled
+    // as a button, and a tag-bound locator broke the moment it stopped being a
+    // <button>. A locator also waits for the render; a bare page.evaluate does
+    // not, and measures whatever exists the instant it runs.
+    const control = page.getByRole('link', { name: 'New link' });
+    await expect(control).toBeVisible();
+
+    const duration = await control.evaluate((node) => getComputedStyle(node).transitionDuration);
 
     // Bounded at both ends. An upper bound alone is satisfied by no transition
     // at all, which is how every duration in this interface sat at zero — the

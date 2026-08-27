@@ -3,11 +3,9 @@ import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { LinkIcon } from '@/components/icons';
 import { BentoCell, BentoGrid } from '@/components/ui/bento';
-import Link from 'next/link';
 
 import { NewLinkButton } from '@/components/links/new-link-button';
-import { buttonVariants } from '@/components/ui/button';
-import { cn } from '@/lib/cn';
+import { ButtonLink } from '@/components/ui/button-link';
 import { Card, CardBody, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Stat } from '@/components/ui/stat';
@@ -73,10 +71,10 @@ export default async function DashboardPage() {
             <CardHeader
               title="Links"
               action={
-                <Link href="/links" className={cn(buttonVariants({ intent: 'ghost', size: 'sm' }))}>
+                <ButtonLink href="/links" intent="ghost" size="sm">
                   <LinkIcon size={14} />
                   Manage
-                </Link>
+                </ButtonLink>
               }
             />
             <CardBody className="p-0">

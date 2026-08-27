@@ -1,10 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-
 import { Plus } from '@/components/icons';
-import { buttonVariants } from '@/components/ui/button';
-import { cn } from '@/lib/cn';
+import { ButtonLink } from '@/components/ui/button-link';
 
 /**
  * Opens the link sheet from anywhere that is not the link list.
@@ -25,13 +22,9 @@ export function NewLinkButton({
   iconSize?: number;
 }) {
   return (
-    <Link
-      href="/links?new=1"
-      className={cn(buttonVariants({ intent, size }))}
-      data-testid="overview-new-link"
-    >
+    <ButtonLink href="/links?new=1" intent={intent} size={size} testId="overview-new-link">
       <Plus size={iconSize} />
       {label}
-    </Link>
+    </ButtonLink>
   );
 }
