@@ -116,7 +116,10 @@ final class SettingsRegistry
             // --- Branding. Exposed because the interface renders it before
             // anyone signs in, and a late arrival means an unbranded first paint.
             new Setting('branding.accent', SettingType::String, 'oklch(0.55 0.16 250)', exposed: true),
-            new Setting('branding.radius', SettingType::Integer, 8, exposed: true),
+            // Twelve, so a card lands on sixteen and an inner control on eight.
+            // The interface derives both from this one value rather than making
+            // every corner the same.
+            new Setting('branding.radius', SettingType::Integer, 12, exposed: true),
             new Setting('branding.typeface', SettingType::String, 'geist', exposed: true),
             new Setting('branding.logo_path', SettingType::String, null, exposed: true),
             new Setting('branding.wordmark_path', SettingType::String, null, exposed: true),

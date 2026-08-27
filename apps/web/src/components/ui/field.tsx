@@ -8,7 +8,7 @@ import { cn } from '@/lib/cn';
 /**
  * The form primitives the setup wizard needs.
  *
- * A hairline border and a focus ring drawn in the accent, matching the button
+ * A recessed surface and a focus ring drawn in the accent, matching the button
  * set. The error is rendered in the flow rather than as a floating hint, so a
  * long validation message from the API cannot cover the next field.
  */
@@ -52,7 +52,10 @@ export function Field({
 }
 
 const control = [
-  'border-border bg-surface text-ink w-full rounded-(--radius-token-sm) border px-3 py-2 text-sm',
+  // Recessed rather than raised: an input is a place to put something into, and
+  // an inset shadow says that where a border alone only draws a box.
+  'border-border/70 bg-surface text-ink w-full rounded-(--radius-token-sm) border px-3 py-2 text-sm',
+  'shadow-(--shadow-inset)',
   'transition-[border-color,box-shadow] duration-(--duration-press) ease-(--ease-out)',
   'placeholder:text-ink-subtle',
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)',

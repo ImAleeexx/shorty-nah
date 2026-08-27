@@ -87,8 +87,13 @@ export default async function DashboardPage() {
       </div>
 
       <BentoGrid data-testid="bento-grid">
-        <BentoCell span="quarter" data-testid="bento-cell">
-          <Card className="h-full">
+        {/* Sized to their content rather than stretched to the tallest cell in
+            the row. A grid stretches by default, which was calm when a card was
+            a hairline rectangle and reads as unfinished now that it floats: two
+            thirds of an elevated card holding nothing looks like a card that
+            failed to load. */}
+        <BentoCell span="quarter" data-testid="bento-cell" className="self-start">
+          <Card>
             <CardBody>
               <Stat
                 label="Links"
@@ -99,13 +104,13 @@ export default async function DashboardPage() {
           </Card>
         </BentoCell>
 
-        <BentoCell span="quarter" data-testid="bento-cell">
-          <Card className="h-full">
+        <BentoCell span="quarter" data-testid="bento-cell" className="self-start">
+          <Card>
             <CardBody>
               <Stat
                 label="Clicks"
                 value={overview.totals.counted}
-                hint={`Last ${overview.days} days`}
+                hint={`${overview.totals.visitors.toLocaleString()} unique · last ${overview.days} days`}
               />
             </CardBody>
           </Card>
@@ -126,19 +131,12 @@ export default async function DashboardPage() {
 
                   {/* Stated as text as well as drawn: the shape shows the trend,
                       the numbers are what somebody actually came to read. */}
-                  <p className="text-ink-muted text-xs">
-                    <span className="tabular">{overview.totals.visitors.toLocaleString()}</span>{' '}
-                    unique {overview.totals.visitors === 1 ? 'visitor' : 'visitors'}
-                    {overview.totals.scans > 0 ? (
-                      <>
-                        {' · '}
-                        <span className="tabular">
-                          {overview.totals.scans.toLocaleString()}
-                        </span>{' '}
-                        from a code
-                      </>
-                    ) : null}
-                  </p>
+                  {overview.totals.scans > 0 ? (
+                    <p className="text-ink-muted text-xs">
+                      <span className="tabular">{overview.totals.scans.toLocaleString()}</span> of
+                      these arrived through a code
+                    </p>
+                  ) : null}
                 </>
               )}
             </CardBody>

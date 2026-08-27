@@ -22,8 +22,8 @@ export const EASE = {
 
 export const DURATION = {
   /** Press feedback. Long enough to notice, short enough to feel immediate. */
-  press: 140,
-  tooltip: 160,
+  press: 150,
+  tooltip: 170,
   popover: 200,
   sheet: 260,
 } as const;

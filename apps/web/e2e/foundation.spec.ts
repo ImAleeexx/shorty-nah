@@ -144,7 +144,7 @@ test.describe('design foundation', () => {
     }
   });
 
-  test('uses hairline borders and no stock shadow on a card', async ({ page, request }) => {
+  test('separates a card by a tinted shadow rather than a border', async ({ page, request }) => {
     const expected = await expectedBranding(request);
 
     await page.goto(APP);
@@ -160,9 +160,35 @@ test.describe('design foundation', () => {
       };
     });
 
-    expect(styles.borderWidth).toBe('1px');
-    expect(styles.boxShadow).toBe('none');
-    expect(styles.radius).toBe(`${expected.radius}px`);
+    // This test used to assert a 1px border and boxShadow: none. The direction
+    // changed, and so does its contract.
+    expect(styles.borderWidth).toBe('0px');
+    expect(styles.boxShadow).not.toBe('none');
+
+    // Split on the commas between shadows rather than inside a colour function,
+    // and drop the fully transparent ring layers Tailwind always emits.
+    const layers = styles.boxShadow
+      .split(/,(?![^(]*\))/)
+      .map((layer) => layer.trim())
+      .filter((layer) => layer !== '' && !/\/\s*0\)|rgba\(0,\s*0,\s*0,\s*0\)/.test(layer));
+
+    // Two shadows, not one: a tight contact shadow under a wider ambient one is
+    // what reads as an object above a surface. A single blur reads as fog.
+    expect(layers.length).toBeGreaterThanOrEqual(2);
+
+    // And tinted, which is the whole point of not using Tailwind's stock
+    // shadows — those are untinted black at low opacity. Chrome serialises an
+    // oklch colour as lab(), whose second and third components are the colour
+    // axes: a true neutral leaves both at zero.
+    const axes = /lab\(\s*[\d.-]+\s+([\d.-]+)\s+([\d.-]+)/.exec(layers[0] ?? '');
+
+    expect(axes, `expected a tinted shadow, got ${layers[0]}`).not.toBeNull();
+    expect(Math.abs(Number(axes?.[1])) + Math.abs(Number(axes?.[2]))).toBeGreaterThan(1);
+
+    // Cards take radius + 4, so one operator-set value keeps a nested stack in
+    // proportion rather than making every corner identical.
+    expect(expected.radius).not.toBeNull();
+    expect(styles.radius).toBe(`${(expected.radius ?? 0) + 4}px`);
   });
 
   test('honours a reduced-motion preference', async ({ browser }) => {
