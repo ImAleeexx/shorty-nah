@@ -32,8 +32,18 @@ warm_caches() {
 # with a copy that has never had the link. Recreated here so both cases are the
 # same, and idempotent so it costs nothing on the path that already had it.
 link_public_storage() {
-    mkdir -p storage/app/public
-    ln -sfn ../storage/app/public public/storage
+    # Already there in the built image, and public/ is root-owned by then, so
+    # attempting it again fails with a permission error and — under `set -e` —
+    # takes the container down. Only the development bind mount arrives without
+    # it.
+    [ -e public/storage ] && return 0
+
+    mkdir -p storage/app/public 2>/dev/null || true
+
+    ln -sfn ../storage/app/public public/storage 2>/dev/null || {
+        echo "warning: public/storage could not be created; uploaded branding assets will not be served" >&2
+        return 0
+    }
 }
 
 verify_environment() {
