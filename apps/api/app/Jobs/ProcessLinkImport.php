@@ -73,7 +73,7 @@ final class ProcessLinkImport implements ShouldQueue
                         'max_clicks' => isset($input['max_clicks']) && $input['max_clicks'] !== ''
                             ? (int) $input['max_clicks']
                             : null,
-                        'tags' => $this->tags($input),
+                        'tags' => $this->tagsFrom($input),
                         'password' => null,
                     ], $owner);
 
@@ -132,9 +132,13 @@ final class ProcessLinkImport implements ShouldQueue
 
     /**
      * @param  array<string, mixed>  $input
+     *                                       Deliberately not named tags(): Horizon calls a job's tags() to label it in
+     *                                       its dashboard, and a private method of that name is a fatal error the
+     *                                       moment the job runs on the Redis queue. Nothing catches it under the sync
+     *                                       driver the test suite uses.
      * @return list<string>
      */
-    private function tags(array $input): array
+    private function tagsFrom(array $input): array
     {
         $raw = $input['tags'] ?? '';
 

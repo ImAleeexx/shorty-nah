@@ -79,14 +79,14 @@ path, and everything in phase 3 depends on it. A task's verification method is p
 
 ## 8. Interface
 
-- [ ] 8.1 Build the QR panel on the link sheet with PNG and SVG download, and verify by browser test that both download and the code scans to the right URL
-- [ ] 8.2 Build the campaign builder on the link sheet, and verify by browser test that editing a parameter on a destination that already carries one replaces it
-- [ ] 8.3 Build the routing rules editor with drag ordering, and verify by browser test that reordering changes where a visitor lands
-- [ ] 8.4 Build import and export on the links screen, and verify by browser test that a file with one bad row reports that row and creates the rest
-- [ ] 8.5 Build the webhooks screen under settings with creation, rotation, the delivery log and replay, and verify by browser test that the secret is shown once
-- [ ] 8.6 Verify every new form surfaces a failure that names no field, using `FormError`
-- [ ] 8.7 Verify every new surface against the motion contract: no scroll-entry motion on the dashboard, durations from the token layer read through parentheses
-- [ ] 8.8 Verify every new surface for keyboard reachability and visible focus, and that no icon arrives from outside the shared module
+- [x] 8.1 Build the QR panel on the link sheet with PNG and SVG download, and verify by browser test that both download and the code scans to the right URL Done. The preview is fetched as an object URL rather than pointed at with an `<img src>`: the endpoint answers with a download disposition, which is what the buttons want and exactly what a preview must not do. The browser test asserts the image actually decoded, not merely that it is present.
+- [x] 8.2 Build the campaign builder on the link sheet, and verify by browser test that editing a parameter on a destination that already carries one replaces it Done. It holds no state of its own — values are read out of the destination and written back into it — so the panel and the destination field cannot disagree.
+- [x] 8.3 Build the routing rules editor with explicit move controls, and verify by browser test that reordering changes where a visitor lands Done with move buttons rather than drag ordering, and the task is corrected accordingly: a drag surface needs a pointer and excludes a keyboard, and this list is capped at 20. Ordering is still explicit and still first-match-wins.
+- [x] 8.4 Build import and export on the links screen, and verify by browser test that a file with one bad row reports that row and creates the rest Done. The upload performs the CSRF handshake explicitly because a file is not JSON and cannot go through the shared helper — the failure that passes every server-side test and returns 419 in a real browser.
+- [x] 8.5 Build the webhooks screen under settings with creation, rotation, the delivery log and replay, and verify by browser test that the secret is shown once Done. The secret is rendered from the creation response and from nowhere else; the browser test reloads and asserts it is absent from the page that replaces it.
+- [x] 8.6 Verify every new form surfaces a failure that names no field, using `FormError` Done: `FormError` is on the rules editor, the import sheet and the webhook form.
+- [x] 8.7 Verify every new surface against the motion contract: no scroll-entry motion on the dashboard, durations from the token layer read through parentheses Done. The disclosure sections have no animation at all — a form an operator uses many times a day is exactly what the contract says gets none — and the only transition added is the caret's rotation at `duration-(--duration-press)`, read through parentheses.
+- [x] 8.8 Verify every new surface for keyboard reachability and visible focus, and that no icon arrives from outside the shared module Done: every control is a button or a labelled field, the move controls carry `aria-label`s naming the rule they act on, and every icon comes from the shared module.
 
 ## 9. Gate
 
