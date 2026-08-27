@@ -53,7 +53,7 @@ export function Field({
 
 const control = [
   'border-border bg-surface text-ink w-full rounded-(--radius-token-sm) border px-3 py-2 text-sm',
-  'transition-[border-color,box-shadow] duration-[--duration-press] ease-(--ease-out)',
+  'transition-[border-color,box-shadow] duration-(--duration-press) ease-(--ease-out)',
   'placeholder:text-ink-subtle',
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)',
   'disabled:opacity-50',

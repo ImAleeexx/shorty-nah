@@ -40,7 +40,7 @@ export function ThemeToggle() {
               aria-pressed={active}
               className={cn(
                 'flex size-7 items-center justify-center rounded-[calc(var(--radius)-6px)]',
-                'transition-[background-color,color] duration-[--duration-press] ease-(--ease-out)',
+                'transition-[background-color,color] duration-(--duration-press) ease-(--ease-out)',
                 'active:scale-[0.98]',
                 active ? 'bg-accent-muted text-ink' : 'text-ink-subtle hover:text-ink',
               )}

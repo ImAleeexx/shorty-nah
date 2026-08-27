@@ -5,16 +5,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Status
 
 All nineteen phases of `openspec/changes/bootstrap-url-shortener` are
-implemented on `feat/bootstrap-foundation`: **156 of 157 tasks**. The stack runs, a link
+implemented on `feat/bootstrap-foundation`: **157 of 157 tasks**. The stack runs, a link
 redirects, clicks land in ClickHouse enriched, reports answer from rollups, a
 fresh instance can be walked from first boot to a signed-in dashboard, and an
 operator can sign in and manage links, analytics, settings, branding and people
 through the interface.
 
-One task is open and cannot be closed from here: **19.4**, the motion review. The
-`review-animations` skill this repository vendors for it refuses to run from an
-agent and is reserved for `/review-animations`, and replicating its workflow by
-other means is prohibited.
+**Motion durations are read through parentheses**: `duration-(--duration-press)`,
+never `duration-[--duration-press]`. The bracket form is Tailwind v3 and resolves
+to `0s` in v4, which silently held every transition in the interface at zero
+until the phase-19 motion review. A lint rule refuses it, and `motion.test.ts`
+reads `globals.css` so the contract and the stylesheet cannot drift apart.
 
 `verification.md` maps all 192 spec scenarios to what proves them, and names the
 three that need a deployed host with public DNS or a MaxMind key.

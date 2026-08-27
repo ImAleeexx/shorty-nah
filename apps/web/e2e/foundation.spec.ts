@@ -171,19 +171,53 @@ test.describe('design foundation', () => {
 
     await page.goto(APP);
 
-    const durations = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('button')).map(
-        (node) => getComputedStyle(node).transitionDuration,
-      ),
+    const observed = await page.evaluate(() => {
+      // A button that actually declares a transition. Taking the first in the
+      // DOM measures whichever element happens to lead, which may declare none
+      // at all — and then any assertion about duration passes for free.
+      const button = [...document.querySelectorAll('button')].find((node) =>
+        getComputedStyle(node).transitionProperty.includes('transform'),
+      );
+
+      if (button === undefined) {
+        return null;
+      }
+
+      const style = getComputedStyle(button);
+
+      return {
+        // Colour still carries meaning, so its transition survives.
+        duration: parseFloat(style.transitionDuration),
+        properties: style.transitionProperty,
+      };
+    });
+
+    expect(observed).not.toBeNull();
+
+    // Gentler, not none. Switching every transition off is the easy reading of
+    // this preference and the wrong one: what causes discomfort is movement, so
+    // colour and opacity keep their timing and the transforms are neutralised.
+    expect(observed!.duration).toBeGreaterThan(0);
+    expect(observed!.properties).toContain('color');
+
+    // Nothing travels: the press feedback does not shrink under reduced motion.
+    // And the movement itself is gone: the rule neutralises the press transform
+    // rather than switching the whole transition off.
+    const travels = await page.evaluate(() =>
+      [...document.styleSheets].some((sheet) => {
+        try {
+          return [...sheet.cssRules].some(
+            (rule) =>
+              rule.cssText.includes('prefers-reduced-motion') &&
+              rule.cssText.includes('transform: none'),
+          );
+        } catch {
+          return false;
+        }
+      }),
     );
 
-    expect(durations.length).toBeGreaterThan(0);
-
-    // Reduced motion means gentler, not none — but movement is suppressed, and a
-    // transition this short is imperceptible.
-    for (const duration of durations) {
-      expect(parseFloat(duration)).toBeLessThan(0.05);
-    }
+    expect(travels).toBe(true);
 
     await context.close();
   });
@@ -194,6 +228,11 @@ test.describe('design foundation', () => {
     const duration = await page
       .locator('button', { hasText: 'New link' })
       .evaluate((node) => getComputedStyle(node).transitionDuration);
+
+    // Bounded at both ends. An upper bound alone is satisfied by no transition
+    // at all, which is how every duration in this interface sat at zero — the
+    // token was written in Tailwind v3 syntax and silently resolved to nothing.
+    expect(parseFloat(duration)).toBeGreaterThan(0);
 
     // Feedback, not animation: a press must read as instant acknowledgement.
     expect(parseFloat(duration)).toBeLessThanOrEqual(0.16);

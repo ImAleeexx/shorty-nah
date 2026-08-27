@@ -73,6 +73,14 @@ const eslintConfig = defineConfig([
           message: 'Name the exact properties rather than using transition-all.',
         },
         {
+          // Tailwind v4 reads a CSS variable through parentheses. In brackets it
+          // is taken as a literal value, so the declaration is invalid and the
+          // duration silently resolves to zero — which is how every transition
+          // in this interface came to be instant without anything failing.
+          selector: 'Literal[value=/duration-\\[--/]',
+          message: 'Read a duration token through parentheses: duration-(--name). In brackets it resolves to 0s in Tailwind v4.',
+        },
+        {
           selector: 'Literal[value=/scale\\(0(\\.0+)?\\)/]',
           message: 'Entrances start from scale(0.95) with opacity 0. Nothing appears from nothing.',
         },

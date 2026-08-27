@@ -36,7 +36,8 @@ export function Sheet({
         <Dialog.Backdrop
           className={cn(
             'bg-ink/20 fixed inset-0 z-40',
-            'transition-opacity duration-[--duration-sheet] ease-(--ease-out)',
+            'transition-opacity duration-(--duration-sheet) ease-(--ease-out)',
+            'data-[ending-style]:duration-(--duration-sheet-exit)',
             'data-[ending-style]:opacity-0 data-[starting-style]:opacity-0',
           )}
         />
@@ -44,7 +45,9 @@ export function Sheet({
           className={cn(
             'fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col',
             'border-border bg-surface border-l',
-            'transition-transform duration-[--duration-sheet] ease-(--ease-drawer)',
+            'motion-travels transition-transform duration-(--duration-sheet) ease-(--ease-drawer)',
+            // Exit is faster than entry, and along the same edge it came from.
+            'data-[ending-style]:duration-(--duration-sheet-exit)',
             // Percentage translate, so the distance is the panel's own width
             // whatever that turns out to be.
             'data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full',
