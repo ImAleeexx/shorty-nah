@@ -170,6 +170,41 @@ final class RedirectResolver
         return is_object($row) ? $row : null;
     }
 
+    /**
+     * The rules for one link, in position order.
+     *
+     * A second query on the cold path only. It is not a join because a link with
+     * five rules would multiply the row above by five and every column with it,
+     * and the cold path runs once an hour per slug.
+     *
+     * @return list<RoutingRule>
+     */
+    private function rulesFor(int $linkId): array
+    {
+        $rows = DB::table('link_rules')
+            ->where('link_id', $linkId)
+            ->orderBy('position')
+            ->select(['kind', 'value', 'destination'])
+            ->get();
+
+        $rules = [];
+
+        foreach ($rows as $row) {
+            /** @var object{kind: string, value: string, destination: string} $row */
+            $rule = RoutingRule::fromArray([
+                'kind' => $row->kind,
+                'value' => $row->value,
+                'destination' => $row->destination,
+            ]);
+
+            if ($rule instanceof RoutingRule) {
+                $rules[] = $rule;
+            }
+        }
+
+        return $rules;
+    }
+
     private function hydrate(object $row): ResolvedLink
     {
         /** @var object{id: int, domain_id: int, public_id: string, destination: string, redirect_mode: ?string, password_hash: ?string, expires_at: ?string, max_clicks: ?int, click_count: int, disabled_at: ?string, referrer_policy: ?string} $row */
@@ -189,6 +224,7 @@ final class RedirectResolver
             maxClicks: $row->max_clicks === null ? null : (int) $row->max_clicks,
             persistedClicks: (int) $row->click_count,
             referrerPolicy: $row->referrer_policy,
+            rules: $this->rulesFor((int) $row->id),
         );
     }
 
