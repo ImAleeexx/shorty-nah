@@ -60,6 +60,9 @@ final class SeedEndToEndFixture extends Command
             // instance — and a run that fails partway through the second-factor
             // spec leaves exactly that behind.
             'security.two_factor_required' => false,
+            // Asserted by the auth spec, so the fixture states it rather than
+            // inheriting whatever the last run happened to leave.
+            'registration.mode' => 'closed',
         ]);
 
         $domain = Domain::query()->where('host', self::HOST)->first()
