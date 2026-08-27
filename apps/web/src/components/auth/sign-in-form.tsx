@@ -290,7 +290,11 @@ export function SignInForm() {
             id={id}
             name="email"
             type="email"
+            inputMode="email"
             autoComplete="username"
+            autoFocus
+            spellCheck={false}
+            placeholder="you@example.com"
             aria-describedby={describedBy}
             required
           />
@@ -310,11 +314,19 @@ export function SignInForm() {
         )}
       </Field>
 
-      <div>
-        <Button intent="primary" size="lg" type="submit" disabled={busy} data-testid="sign-in">
-          {busy ? 'Signing in' : 'Sign in'}
-        </Button>
-      </div>
+      {/* Full width, because it is the only thing to do on this page and a
+          button sized to its label leaves the form looking unfinished at the
+          bottom. */}
+      <Button
+        intent="primary"
+        size="lg"
+        type="submit"
+        className="w-full"
+        disabled={busy}
+        data-testid="sign-in"
+      >
+        {busy ? 'Signing in' : 'Sign in'}
+      </Button>
     </form>
   );
 }
