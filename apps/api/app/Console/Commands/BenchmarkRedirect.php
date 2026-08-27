@@ -32,7 +32,7 @@ final class BenchmarkRedirect extends Command
         {--warmup=200 : Requests before measuring, to fill the cache and the opcode cache}
         {--record= : Write the result to this file as the baseline}
         {--compare= : Compare against a recorded baseline}
-        {--budget-us=0 : Permitted increase in mean microseconds over the baseline}';
+        {--budget-us=0 : Permitted increase in median microseconds over the baseline}';
 
     protected $description = 'Measure the redirect hot path against a cached link';
 
@@ -98,13 +98,23 @@ final class BenchmarkRedirect extends Command
         $compare = $this->option('compare');
 
         if (is_string($compare) && $compare !== '') {
-            return $this->compare($compare, $result['mean_us']);
+            return $this->compare($compare, $result['p50_us']);
         }
 
         return self::SUCCESS;
     }
 
-    private function compare(string $path, float $mean): int
+    /**
+     * Compared on the median, not the mean.
+     *
+     * The mean was tried first and was useless as a gate: five runs of identical
+     * code produced deltas from +33us to +195us, so a 150us budget failed two
+     * runs in five with nothing changed. A latency mean is dominated by its
+     * outliers — a garbage collection or the container losing its slice moves it
+     * far more than the code does — and a gate that fails at random is a gate
+     * everyone learns to pass by re-running.
+     */
+    private function compare(string $path, float $median): int
     {
         if (! File::exists($path)) {
             $this->components->error("No baseline at {$path}. Record one first.");
@@ -114,14 +124,14 @@ final class BenchmarkRedirect extends Command
 
         /** @var array<string, mixed> $baseline */
         $baseline = json_decode((string) File::get($path), true);
-        $before = is_numeric($baseline['mean_us'] ?? null) ? (float) $baseline['mean_us'] : 0.0;
+        $before = is_numeric($baseline['p50_us'] ?? null) ? (float) $baseline['p50_us'] : 0.0;
         $budget = (float) $this->option('budget-us');
-        $added = round($mean - $before, 2);
+        $added = round($median - $before, 2);
 
         $this->line(sprintf(
-            '  baseline %.2fus, now %.2fus, added %+.2fus, budget %.2fus',
+            '  baseline p50 %.2fus, now %.2fus, added %+.2fus, budget %.2fus',
             $before,
-            $mean,
+            $median,
             $added,
             $budget,
         ));

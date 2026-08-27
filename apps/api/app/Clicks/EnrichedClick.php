@@ -52,6 +52,8 @@ final class EnrichedClick
             'operating_system' => $this->client->operatingSystem,
             'browser' => $this->client->browser,
 
+            'source' => $this->envelope->source,
+
             'referrer_host' => $this->referrerHost(),
             'redirect_mode' => $this->envelope->redirectMode,
 

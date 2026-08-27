@@ -54,6 +54,10 @@ final class RedirectController
 
     private const DEFAULT_REFERRER_POLICY = 'strict-origin-when-cross-origin';
 
+    public const SCAN_PARAMETER = 's';
+
+    public const SCAN_VALUE = 'qr';
+
     public function __invoke(Request $request, string $slug, RedirectResolver $resolver, ClickCounter $clicks): SymfonyResponse
     {
         $link = $resolver->resolve($request->getHost(), $slug);
@@ -296,9 +300,22 @@ final class RedirectController
             userAgent: $request->userAgent(),
             referrer: $request->headers->get('referer'),
             redirectMode: $link->mode->value,
+            source: $this->source($request),
             geo: $geo,
             visitorHash: $this->visitors->for($request->ip(), $request->userAgent()),
         ));
+    }
+
+    /**
+     * A scan, or an ordinary click.
+     *
+     * The code encodes the short URL with a marker, because a scan carries no
+     * referrer of its own — a camera is not a page — and there is otherwise
+     * nothing to distinguish it from someone typing the URL.
+     */
+    private function source(Request $request): string
+    {
+        return $request->query(self::SCAN_PARAMETER) === self::SCAN_VALUE ? self::SCAN_VALUE : '';
     }
 
     private function direct(ResolvedLink $link, string $destination): RedirectResponse

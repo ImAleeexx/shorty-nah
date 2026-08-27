@@ -27,6 +27,8 @@ final class ClickEnvelope
         public readonly ?string $userAgent,
         public readonly ?string $referrer,
         public readonly string $redirectMode,
+        /** Empty for an ordinary click, 'qr' for a scan. */
+        public readonly string $source = '',
         public readonly ?GeoResult $geo = null,
         public readonly ?string $visitorHash = null,
         public readonly ?string $address = null,
@@ -45,6 +47,7 @@ final class ClickEnvelope
             'user_agent' => $this->userAgent,
             'referrer' => $this->referrer,
             'redirect_mode' => $this->redirectMode,
+            'source' => $this->source,
         ];
 
         if ($this->geo instanceof GeoResult) {
@@ -83,6 +86,7 @@ final class ClickEnvelope
             userAgent: is_string($payload['user_agent'] ?? null) ? $payload['user_agent'] : null,
             referrer: is_string($payload['referrer'] ?? null) ? $payload['referrer'] : null,
             redirectMode: is_string($payload['redirect_mode'] ?? null) ? $payload['redirect_mode'] : 'direct',
+            source: is_string($payload['source'] ?? null) ? $payload['source'] : '',
             geo: self::geoFrom($payload),
             visitorHash: is_string($payload['visitor_hash'] ?? null) ? $payload['visitor_hash'] : null,
             address: is_string($payload['address'] ?? null) ? $payload['address'] : null,
