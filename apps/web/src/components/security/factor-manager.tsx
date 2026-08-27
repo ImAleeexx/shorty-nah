@@ -1,0 +1,333 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { toast } from 'sonner';
+
+import { Copy, LockKey, Plus, Trash } from '@/components/icons';
+import { Button } from '@/components/ui/button';
+import { Field, Input } from '@/components/ui/field';
+import { FormError } from '@/components/ui/form-error';
+import { apiRequest, type ApiFailure } from '@/lib/client-api';
+
+export type Credential = {
+  id: string;
+  type: string;
+  name: string;
+  added_at: string | null;
+  last_used_at: string | null;
+};
+
+type Enrolment = { id: string; secret: string; uri: string };
+
+/**
+ * Enrolling and removing second factors.
+ *
+ * This is the screen whose absence made the instance-wide requirement a trap.
+ * The API has carried enrolment since phase 17, and its routes deliberately sit
+ * above the enforcement so a confined account can reach them — but nothing in
+ * the interface ever called them. Turning the requirement on with nobody
+ * enrolled locked every operator out of their own instance, with a refusal on
+ * screen and nowhere to go.
+ */
+export function FactorManager({
+  credentials,
+  required,
+  enrolled,
+  recoveryRemaining,
+}: {
+  credentials: Credential[];
+  required: boolean;
+  enrolled: boolean;
+  recoveryRemaining: number;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<ApiFailure | null>(null);
+  const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
+  const [code, setCode] = useState('');
+  const [recovery, setRecovery] = useState<string[] | null>(null);
+
+  function report(result: ApiFailure) {
+    if (result.status === 423) {
+      toast.error('Sign in again to change a second factor', {
+        id: 'recent-auth',
+        description: 'This action needs a recent sign-in.',
+      });
+
+      return;
+    }
+
+    setFailure(result);
+  }
+
+  async function begin() {
+    setBusy(true);
+    setFailure(null);
+
+    const result = await apiRequest<Enrolment>('/api/v1/auth/two-factor', {
+      method: 'POST',
+      body: { name: 'Authenticator app' },
+    });
+
+    setBusy(false);
+
+    if (!result.ok) {
+      report(result);
+
+      return;
+    }
+
+    setEnrolment(result.data);
+  }
+
+  async function confirm(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (enrolment === null) {
+      return;
+    }
+
+    setBusy(true);
+    setFailure(null);
+
+    const result = await apiRequest<{ recovery_codes: string[] }>(
+      `/api/v1/auth/two-factor/${enrolment.id}/confirm`,
+      { method: 'POST', body: { code } },
+    );
+
+    setBusy(false);
+
+    if (!result.ok) {
+      report(result);
+
+      return;
+    }
+
+    setEnrolment(null);
+    setCode('');
+
+    // Issued once, on the first factor only. Held on screen until dismissed
+    // rather than shown in a toast: these are the way back in, and a message
+    // that disappears on its own is the wrong container for them.
+    if (result.data.recovery_codes.length > 0) {
+      setRecovery(result.data.recovery_codes);
+    }
+
+    toast.success('Second factor enrolled', { id: 'two-factor' });
+    router.refresh();
+  }
+
+  async function remove(credential: Credential) {
+    setBusy(true);
+    setFailure(null);
+
+    const result = await apiRequest(`/api/v1/auth/two-factor/${credential.id}`, {
+      method: 'DELETE',
+    });
+
+    setBusy(false);
+
+    if (!result.ok) {
+      report(result);
+
+      return;
+    }
+
+    toast.success(`${credential.name} removed`, { id: `factor-${credential.id}` });
+    router.refresh();
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <FormError failure={failure} />
+
+      {required && !enrolled ? (
+        <p
+          className="border-border text-ink rounded-(--radius-token) border p-3 text-sm"
+          role="status"
+          data-testid="enrolment-required"
+        >
+          This instance requires a second factor. Enrol one below to reach the rest of the
+          interface.
+        </p>
+      ) : null}
+
+      {recovery === null ? null : (
+        <div
+          className="border-border rounded-(--radius-token) border p-3"
+          role="alert"
+          data-testid="recovery-codes"
+        >
+          <p className="text-ink text-sm">
+            Your recovery codes. Each works once, and this is the only time they are shown.
+          </p>
+
+          <ul className="tabular text-ink-muted mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            {recovery.map((entry) => (
+              <li key={entry}>{entry}</li>
+            ))}
+          </ul>
+
+          <div className="mt-3 flex items-center gap-2">
+            <Button
+              intent="outline"
+              size="sm"
+              onClick={() => {
+                void navigator.clipboard.writeText(recovery.join('\n'));
+                toast.success('Copied', { id: 'recovery-copied' });
+              }}
+            >
+              <Copy size={14} />
+              Copy
+            </Button>
+
+            <Button intent="ghost" size="sm" onClick={() => setRecovery(null)}>
+              I have saved them
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {credentials.length === 0 ? (
+        <p className="text-ink-muted text-sm">No second factor on this account.</p>
+      ) : (
+        <ul className="border-border divide-border divide-y rounded-(--radius-token) border">
+          {credentials.map((credential) => (
+            <li
+              key={credential.id}
+              className="flex items-center justify-between gap-4 px-4 py-3"
+              data-testid="factor-row"
+            >
+              <div className="min-w-0">
+                <p className="text-ink flex items-center gap-2 text-sm">
+                  <LockKey size={15} className="text-ink-muted shrink-0" />
+                  {credential.name}
+                </p>
+                <p className="text-ink-muted mt-1 text-xs">
+                  {credential.type === 'totp' ? 'Authenticator app' : 'Passkey'}
+                  {credential.last_used_at === null ? ' · never used' : ''}
+                </p>
+              </div>
+
+              <Button
+                intent="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => void remove(credential)}
+                data-testid={`remove-factor-${credential.id}`}
+              >
+                <Trash size={14} />
+                Remove
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {credentials.length > 0 && recoveryRemaining > 0 ? (
+        <p className="text-ink-muted text-xs">
+          <span className="tabular">{recoveryRemaining}</span> recovery{' '}
+          {recoveryRemaining === 1 ? 'code' : 'codes'} remaining.
+        </p>
+      ) : null}
+
+      {enrolment === null ? (
+        <div>
+          <Button
+            intent="primary"
+            size="md"
+            disabled={busy}
+            onClick={() => void begin()}
+            data-testid="begin-enrolment"
+          >
+            <Plus size={14} />
+            Add an authenticator app
+          </Button>
+        </div>
+      ) : (
+        <form
+          className="border-border flex flex-col gap-4 rounded-(--radius-token) border p-4"
+          onSubmit={confirm}
+          data-testid="enrolment-form"
+        >
+          <p className="text-ink text-sm">
+            Add this secret to your authenticator app, then enter the code it shows.
+          </p>
+
+          {/* The secret as text, not only a QR code. A QR needs a camera and a
+              second device; the secret works with a password manager on the
+              machine already in front of the operator. */}
+          <code
+            className="tabular border-border text-ink-muted rounded-(--radius-token-sm) border px-3 py-2 text-xs break-all"
+            data-testid="enrolment-secret"
+          >
+            {enrolment.secret}
+          </code>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              intent="outline"
+              size="sm"
+              onClick={() => {
+                void navigator.clipboard.writeText(enrolment.secret);
+                toast.success('Copied', { id: 'secret-copied' });
+              }}
+            >
+              <Copy size={14} />
+              Copy the secret
+            </Button>
+
+            <a
+              href={enrolment.uri}
+              className="text-ink-muted hover:text-ink text-xs underline underline-offset-2"
+            >
+              Open in an authenticator
+            </a>
+          </div>
+
+          <Field label="Code from the app" error={failure?.errors.code?.[0]}>
+            {({ id, describedBy }) => (
+              <Input
+                id={id}
+                className="tabular"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                aria-describedby={describedBy}
+                value={code}
+                onChange={(event) => setCode(event.target.value)}
+                data-testid="enrolment-code"
+                required
+              />
+            )}
+          </Field>
+
+          <div className="flex items-center gap-3">
+            <Button
+              intent="primary"
+              size="md"
+              type="submit"
+              disabled={busy}
+              data-testid="confirm-enrolment"
+            >
+              {busy ? 'Confirming' : 'Confirm'}
+            </Button>
+
+            <Button
+              intent="ghost"
+              size="md"
+              type="button"
+              onClick={() => {
+                setEnrolment(null);
+                setCode('');
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}

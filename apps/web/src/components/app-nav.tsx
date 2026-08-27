@@ -9,6 +9,7 @@ const DESTINATIONS = [
   { href: '/', label: 'Overview', ownerOnly: false },
   { href: '/links', label: 'Links', ownerOnly: false },
   { href: '/people', label: 'People', ownerOnly: false },
+  { href: '/security', label: 'Security', ownerOnly: false },
   { href: '/settings', label: 'Settings', ownerOnly: false },
   // The audit log is an owner surface, so it is absent rather than disabled for
   // anyone else — a greyed-out link still discloses that it exists.

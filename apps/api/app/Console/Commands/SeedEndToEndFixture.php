@@ -54,6 +54,12 @@ final class SeedEndToEndFixture extends Command
             'branding.accent' => 'oklch(0.62 0.19 26)',
             'branding.radius' => 14,
             'redirect.interstitial_delay_ms' => 600,
+            // Cleared alongside the credentials below. The fixture already
+            // removed every second factor and left the requirement standing,
+            // which is the one combination that locks the suite out of its own
+            // instance — and a run that fails partway through the second-factor
+            // spec leaves exactly that behind.
+            'security.two_factor_required' => false,
         ]);
 
         $domain = Domain::query()->where('host', self::HOST)->first()

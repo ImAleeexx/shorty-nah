@@ -123,7 +123,11 @@ e2e-setup: e2e-setup-fixture ## Walk the setup wizard in a browser from first bo
 # seeds the domain and links the rest of the suite drives.
 e2e: e2e-setup ## Run the whole browser suite, wizard first
 	$(MAKE) e2e-fixture
-	cd apps/web && pnpm exec playwright test --grep-invert @firstboot
+	cd apps/web && pnpm exec playwright test --grep-invert "@firstboot|@security"
+	# Last, alone, and single-worker: it turns on the instance-wide second-factor
+	# requirement, and every other spec signs in as the same operator. Running it
+	# alongside them locks them out mid-test.
+	cd apps/web && pnpm exec playwright test --grep @security --workers=1
 
 lint: lint-api lint-web ## Run every linter
 

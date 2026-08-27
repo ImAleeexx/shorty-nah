@@ -11,7 +11,7 @@ import { fetchPublicConfiguration } from '@/lib/api';
 import { sanitiseBranding } from '@/lib/branding';
 import type { DomainRecord } from '@/lib/links';
 import { apiGet } from '@/lib/server-api';
-import { administrates, currentViewer, owns } from '@/lib/session';
+import { administrates, currentViewer, owns, mustEnrolSecondFactor } from '@/lib/session';
 
 export const metadata: Metadata = { title: 'Settings' };
 
@@ -28,6 +28,13 @@ export default async function SettingsPage() {
 
   if (viewer === null) {
     redirect('/sign-in');
+  }
+
+  // An account the instance confines to enrolment is sent there rather than
+  // shown a refusal it cannot act on. Every route past the requirement answers
+  // 403, so without this the page renders empty and says nothing useful.
+  if (mustEnrolSecondFactor(viewer)) {
+    redirect('/security');
   }
 
   // An account that cannot administrate is not told this page exists.
