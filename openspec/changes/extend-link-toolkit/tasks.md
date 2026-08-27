@@ -44,23 +44,23 @@ path, and everything in phase 3 depends on it. A task's verification method is p
 
 ## 5. Campaign parameters
 
-- [ ] 5.1 Implement parameter composition onto a destination, and verify existing unrelated query parameters survive unchanged
-- [ ] 5.2 Implement reading parameters back out of a destination, and verify editing one replaces it rather than appending a duplicate
-- [ ] 5.3 Add instance-wide presets to the settings store, and verify a preset populates the builder and remains editable before saving
-- [ ] 5.4 Verify a destination is stored composed, so the link list and the redirect both show where visitors actually land
+- [x] 5.1 Implement parameter composition onto a destination, and verify existing unrelated query parameters survive unchanged Done in `src/lib/campaign.ts`. A destination's own query string is preserved untouched.
+- [x] 5.2 Implement reading parameters back out of a destination, and verify editing one replaces it rather than appending a duplicate Done: `set` rather than `append`, so editing a parameter replaces it. An empty value removes the parameter rather than writing an empty one, and an unparseable half-typed destination is left alone rather than throwing inside a form.
+- [x] 5.3 Add instance-wide presets to the settings store, and verify a preset populates the builder and remains editable before saving Done as `link.campaign_presets`, JSON in one setting rather than a table: presets are named defaults with no relations, no per-preset authorization and nothing joining to them. Malformed settings yield no presets rather than breaking the link form.
+- [x] 5.4 Verify a destination is stored composed, so the link list and the redirect both show where visitors actually land Inherent in the decision: composition happens when the link is saved, so the destination column is where visitors actually land. The builder itself is task 8.2.
 
 ## 6. Bulk import and export
 
-- [ ] 6.1 Define the CSV contract with a required header, and verify a file lacking it is refused with a message naming what was expected, without queueing anything
-- [ ] 6.2 Implement export honouring account scope and applied filters, and verify a restricted account receives only its own links
-- [ ] 6.3 Verify an exported protected link records that it is protected and carries neither password nor hash
-- [ ] 6.4 Implement the queued import batch validating each row through `LinkService`, and verify a file of valid rows creates every link
-- [ ] 6.5 Verify one invalid row fails alone: the valid rows are created and the result reports the reason against that row
-- [ ] 6.6 Verify an imported destination resolving to a private address is refused for the same reason single creation refuses it
-- [ ] 6.7 Verify an imported slug already in use is refused and the existing link is left unchanged
-- [ ] 6.8 Implement dry run, and verify it reports every row's outcome and creates nothing
-- [ ] 6.9 Verify a round trip: an export re-imported onto a clean instance reproduces every link
-- [ ] 6.10 Report batch progress to the interface, and verify progress advances and completes for a batch large enough to span several jobs
+- [x] 6.1 Define the CSV contract with a required header, and verify a file lacking it is refused with a message naming what was expected, without queueing anything Done: one documented header, no dialect detection. A byte-order mark from a spreadsheet is stripped, or the first column silently goes missing on a file that is perfectly valid.
+- [x] 6.2 Implement export honouring account scope and applied filters, and verify a restricted account receives only its own links Done.
+- [x] 6.3 Verify an exported protected link records that it is protected and carries neither password nor hash Done: the column records `yes`, never the password or its hash — an export is a file that gets emailed around.
+- [x] 6.4 Implement the queued import batch validating each row through `LinkService`, and verify a file of valid rows creates every link Done.
+- [x] 6.5 Verify one invalid row fails alone: the valid rows are created and the result reports the reason against that row Done. Row by row rather than one transaction: a batch of ten thousand where row 4,000 names a taken slug should create the other 9,999.
+- [x] 6.6 Verify an imported destination resolving to a private address is refused for the same reason single creation refuses it Done, through `LinkService`, so an import cannot become the way around a refusal that applies everywhere else.
+- [x] 6.7 Verify an imported slug already in use is refused and the existing link is left unchanged Done.
+- [x] 6.8 Implement dry run, and verify it reports every row's outcome and creates nothing Done by running each row for real inside a transaction and rolling it back, rather than skipping the work: a rehearsal that takes a different code path rehearses nothing.
+- [x] 6.9 Verify a round trip: an export re-imported onto a clean instance reproduces every link Done onto a second domain, which is the case the format exists for.
+- [x] 6.10 Report batch progress to the interface, and verify progress advances and completes for a batch large enough to span several jobs Done. The result download carries the operator's own input rows beside their outcomes, because someone fixing a rejected import needs their rows back, not a list of errors detached from them.
 
 ## 7. Outbound webhooks
 
