@@ -51,6 +51,36 @@ for artefact in postgres.sql.enc clickhouse.native.enc assets.tar.enc; do
     fi
 done
 
+# Every table dropped before the dump is applied, because a restore is a
+# replacement rather than a merge — the same reason the event store is truncated
+# below.
+#
+# The dump's own --clean is not enough. It drops only what it knows about, and a
+# backup taken before a deploy that added tables cannot drop them: restoring one
+# fails on `constraint webhook_endpoints_created_by_foreign on table
+# webhook_endpoints depends on index users_pkey`, because the dump tries to drop
+# users_pkey while a table it has never heard of still references it. That is the
+# ordinary case, not an exotic one — it is what restoring last week's backup after
+# this week's deploy looks like.
+#
+# Tables rather than the schema. Dropping and recreating `public` would take the
+# ALTER DEFAULT PRIVILEGES with it, and the application role would silently lose
+# its grants on everything the dump then creates.
+printf 'Clearing the existing schema...\n'
+
+"${COMPOSE[@]}" exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
+    psql --quiet -v ON_ERROR_STOP=1 -U "$DB_USERNAME" -d "$DB_DATABASE" <<'SQL' >/dev/null
+DO $$
+DECLARE
+    r record;
+BEGIN
+    FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' LOOP
+        EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+END
+$$;
+SQL
+
 printf 'Application data...\n'
 # ON_ERROR_STOP, or psql reports each failed statement and still exits 0 — which
 # would leave a half-written database while this script prints success, the one
