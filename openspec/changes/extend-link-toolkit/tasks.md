@@ -90,6 +90,6 @@ path, and everything in phase 3 depends on it. A task's verification method is p
 
 ## 9. Gate
 
-- [ ] 9.1 Extend `verification.md` with every scenario added here and what proves it, and name any that need a deployed host
-- [ ] 9.2 Run `make ci` and `make e2e` green, and run `make scan` and record any new finding with a reason or an expiry
-- [ ] 9.3 Update `CLAUDE.md` for the revised hot-path guarantee and the envelope's new shape, since both contradict what it currently states
+- [x] 9.1 Extend `verification.md` with every scenario added here and what proves it, and name any that need a deployed host Done in this change's own `verification.md`. One exception: a delivery walking its backoff to exhaustion takes six minutes of wall clock, which no suite can sit through — the note says what would close it.
+- [x] 9.2 Run `make ci` and `make e2e` green, and run `make scan` and record any new finding with a reason or an expiry Done: 656 Pest (1886 assertions), 53 Vitest, 78 browser tests, all green. `make scan` clean — no new dependency, secret or image findings.
+- [x] 9.3 Update `CLAUDE.md` for the revised hot-path guarantee and the envelope's new shape, since both contradict what it currently states. Done: the hot-path guarantee now reads "no database query and no network call" rather than "no work", the envelope's new shape is recorded, and the Horizon `tags()` collision is written down as a trap

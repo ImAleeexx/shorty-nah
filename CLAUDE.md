@@ -5,7 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Status
 
 All nineteen phases of `openspec/changes/bootstrap-url-shortener` are
-implemented on `feat/bootstrap-foundation`: **157 of 157 tasks**. The stack runs, a link
+implemented on `feat/bootstrap-foundation`: **157 of 157 tasks**.
+`openspec/changes/extend-link-toolkit` adds QR codes, campaign parameters, bulk
+import and export, outbound webhooks, and rule-based routing: **63 of 64 tasks**,
+the remainder being a webhook backoff that cannot be watched to exhaustion inside
+a test run. The stack runs, a link
 redirects, clicks land in ClickHouse enriched, reports answer from rollups, a
 fresh instance can be walked from first boot to a signed-in dashboard, and an
 operator can sign in and manage links, analytics, settings, branding and people
@@ -137,6 +141,12 @@ first — PHPStan's parser accepts constructs PHP itself rejects.
 file collides with another file's, and with Pest's and Laravel's own helpers
 (`test`, `visit`, `validator`, `record` are all taken). Name them distinctively.
 
+**A job may not define `tags()`.** Horizon calls a job's `tags()` to label it in
+its dashboard, so a private method of that name is a fatal error the moment the
+job is pushed to Redis — and completely invisible under the sync queue driver the
+test suite uses. Every import failed with a `500` in a real browser while the
+whole API suite passed.
+
 **A browser-side write needs the CSRF handshake.** The API runs a session on
 every route, so a cookie-authenticated `POST` without an `X-XSRF-TOKEN` header is
 refused with `419`. A client must `GET /sanctum/csrf-cookie` first and echo the
@@ -239,8 +249,25 @@ The single most performance-sensitive route. Required shape:
 
 1. Resolve `slug` + host from **Redis only**. A cache hit must not touch Postgres.
 2. Negative-cache unknown slugs (short TTL) so slug-scanning cannot hammer the database.
-3. Push a raw click envelope onto the Redis `clicks` queue — fire-and-forget, never inline enrichment.
-4. Return the redirect.
+3. Resolve geography in-process from the local MaxMind database, and compute the visitor hash.
+4. Evaluate the link's routing rules, if it has any, and pick the destination.
+5. Push the click envelope onto the Redis `clicks` queue — fire-and-forget, never inline enrichment.
+6. Return the redirect.
+
+**Steps 3 and 4 are new, and narrow the old guarantee deliberately.** It used to
+read "no work at all"; it now reads **no database query and no network call**. A
+memory-mapped read of a local file is admitted; a query, a socket or a remote
+call is not. Country rules cannot be evaluated after the visitor has already been
+sent somewhere, which is why geography moved here — and once it had, keeping the
+address on the envelope would have meant writing a raw address into Redis to
+answer a question already answered. **The envelope carries the resolved country,
+ASN and visitor hash, and no address.** A raw IP now exists only for the life of
+the request that carried it.
+
+`make bench` guards this. It compares the **median** against a recorded baseline
+with a 150us budget — not the mean, which spread +33us to +195us across runs of
+identical code and failed the gate two times in five. Run `make bench-record`
+before changing this path and `make bench` after.
 
 Cache invalidation is driven by model events on `Link`; never hand-expire keys from controllers.
 Multi-domain means the cache key is `(host, slug)`, not `slug` alone.
@@ -263,8 +290,10 @@ Dashboards read **rollups**, never raw events. Raw events are for drill-down and
 
 - Drop prefetches: `Sec-Purpose: prefetch`, `Purpose: prefetch`, `X-Purpose`, and all `HEAD` requests.
 - Drop known bots by UA plus datacenter ASN from GeoLite2.
-- Unique visitor = hash of `ip + ua + daily-rotating salt`. **Raw IPs are never persisted** — geo is
-  resolved during enrichment and the IP is discarded.
+- Unique visitor = hash of `ip + ua + daily-rotating salt`. **Raw IPs are never persisted** — geo and the
+  hash are both resolved during the request that carried the address, and the address is discarded
+  before anything is queued. `ClickEnvelope` keeps an `address` field that nothing writes: a deploy with
+  a non-empty queue has envelopes in the old shape, and draining them must still work.
 - Dedupe a `(visitor_hash, link_id)` pair inside a short window to absorb double-fires.
 
 ### ClickHouse
