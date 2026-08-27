@@ -353,7 +353,11 @@ jobs:
                    apps/api/storage/framework/sessions \
                    apps/api/storage/framework/views \
                    apps/api/bootstrap/cache
-          chmod -R a+rwX apps/api/storage apps/api/bootstrap/cache
+          # public/ too: Octane's FrankenPHP driver copies its worker script in
+          # there at boot, and the entrypoint puts the storage symlink beside it.
+          # Everything the container writes into the mounted tree needs this, not
+          # just the directory Laravel is usually asked about.
+          chmod -R a+rwX apps/api/storage apps/api/bootstrap/cache apps/api/public
 
       - name: Bring the stack up
         run: |
