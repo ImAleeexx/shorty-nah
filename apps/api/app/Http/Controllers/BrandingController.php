@@ -150,6 +150,43 @@ final class BrandingController
         return new JsonResponse(['branding' => $this->present($settings)], 201);
     }
 
+    /**
+     * Clearing an asset, which upload alone cannot do.
+     *
+     * An operator who uploads the wrong logo has no way back otherwise: there is
+     * no empty file to upload over it, and the branding payload has no field for
+     * it because the path is written by the upload rather than submitted.
+     */
+    public function removeAsset(Request $request, string $kind, SettingsStore $settings, BrandingAssetStore $assets, AuditLog $audit): JsonResponse
+    {
+        if (! $this->administrates($request)) {
+            return new JsonResponse(status: 404);
+        }
+
+        if (! in_array($kind, ['logo', 'wordmark', 'favicon'], true)) {
+            return new JsonResponse(status: 404);
+        }
+
+        $key = 'branding.'.$kind.'_path';
+
+        // The file goes with the reference. Leaving it would accumulate assets
+        // nothing points at, which is the same reason upload removes the one it
+        // replaces.
+        $assets->forget($settings->string($key));
+
+        $settings->set($key, null);
+
+        $audit->record(
+            AuditAction::BrandingChanged,
+            actor: $request->user(),
+            targetType: 'settings',
+            context: ['keys' => $key, 'removed' => 'true'],
+            request: $request,
+        );
+
+        return new JsonResponse(['branding' => $this->present($settings)]);
+    }
+
     private function administrates(Request $request): bool
     {
         $user = $request->user();

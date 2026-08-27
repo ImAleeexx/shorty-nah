@@ -24,6 +24,18 @@ warm_caches() {
     # one that is not there yet. Added once routes are controller-backed.
 }
 
+# Uploaded branding assets live in storage/app/public and are referenced as
+# /storage/..., which resolves only through this link.
+#
+# The image already carries it, and in development that is not enough: the
+# compose override bind-mounts the host tree over /app, which replaces public/
+# with a copy that has never had the link. Recreated here so both cases are the
+# same, and idempotent so it costs nothing on the path that already had it.
+link_public_storage() {
+    mkdir -p storage/app/public
+    ln -sfn ../storage/app/public public/storage
+}
+
 verify_environment() {
     php artisan shortynah:verify-env
 }
@@ -37,6 +49,7 @@ announce_setup_token() {
 
 case "${1:-octane}" in
     octane)
+        link_public_storage
         verify_environment
         warm_caches
         announce_setup_token
@@ -61,12 +74,14 @@ case "${1:-octane}" in
         ;;
 
     worker)
+        link_public_storage
         verify_environment
         warm_caches
         exec php artisan horizon
         ;;
 
     clicks)
+        link_public_storage
         verify_environment
         warm_caches
         # A dedicated drain loop rather than a queued job per click: the event
@@ -75,6 +90,7 @@ case "${1:-octane}" in
         ;;
 
     scheduler)
+        link_public_storage
         verify_environment
         warm_caches
         exec php artisan schedule:work

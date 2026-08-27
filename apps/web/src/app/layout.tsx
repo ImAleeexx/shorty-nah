@@ -16,7 +16,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { default: branding.name, template: `%s · ${branding.name}` },
     description: `${branding.name} link management`,
-    icons: branding.favicon === null ? undefined : { icon: branding.favicon },
+    // Always exactly one icon. The uploaded favicon when there is one, and the
+    // accent-derived mark otherwise — never both, and never the framework's.
+    icons: { icon: branding.favicon ?? '/brand-icon' },
     robots: { index: false, follow: false },
   };
 }

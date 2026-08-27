@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes';
 import { Monitor, Moon, Sun } from '@/components/icons';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/cn';
+import { useMounted } from '@/lib/use-mounted';
 
 const OPTIONS = [
   { value: 'light', label: 'Light', Icon: Sun },
@@ -15,12 +16,21 @@ const OPTIONS = [
 /**
  * Three states, not two: following the system is a choice, and a switch loses it.
  *
- * No mount effect. next-themes returns undefined before hydration, so the active
- * state is false on the first render and correct after it — which is the same
- * outcome without a state update inside an effect.
+ * The active state is withheld until after hydration, and that is the whole
+ * point. This previously read `theme` directly, on the reasoning that
+ * next-themes returns undefined before hydration — but it returns undefined on
+ * the *server* and the stored theme during the client's hydration render, so
+ * every attribute derived from it differed between the two. React reported a
+ * tree that "hydrated but some attributes of the server rendered HTML didn't
+ * match", and said it would not patch them up: on a dark instance the pressed
+ * button kept the server's unpressed markup.
+ *
+ * Reading `mounted` first makes the hydration render identical to the server's,
+ * and the real state arrives in the update immediately after.
  */
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const mounted = useMounted();
 
   return (
     <div
@@ -29,7 +39,7 @@ export function ThemeToggle() {
       aria-label="Colour mode"
     >
       {OPTIONS.map(({ value, label, Icon }) => {
-        const active = theme === value;
+        const active = mounted && theme === value;
 
         return (
           <Tooltip key={value} label={label}>

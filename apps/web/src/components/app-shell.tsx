@@ -41,16 +41,27 @@ export function AppShell({
 
         <header className="border-border bg-surface border-b">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
+            {/* The wordmark takes the header when there is one: it is the
+                horizontal lockup, and it already carries the name. The logo is
+                the square mark and stands in when there is no wordmark. Falling
+                through to the name as text means an instance that has uploaded
+                nothing still says what it is.
+
+                Both carry the instance name as alt text rather than "logo",
+                because what a reader needs here is whose instance this is. */}
             <div className="flex min-w-0 items-center gap-3">
-              {branding.logo === null ? (
-                <span className="text-ink truncate text-sm font-semibold tracking-tight">
-                  {branding.name}
-                </span>
-              ) : (
+              {branding.wordmark !== null ? (
                 /* eslint-disable-next-line @next/next/no-img-element -- an
                    operator-uploaded asset of unknown dimensions, already
                    re-encoded and size-bounded server-side. */
+                <img src={branding.wordmark} alt={branding.name} className="max-h-6 w-auto" />
+              ) : branding.logo !== null ? (
+                /* eslint-disable-next-line @next/next/no-img-element -- as above. */
                 <img src={branding.logo} alt={branding.name} className="max-h-6 w-auto" />
+              ) : (
+                <span className="text-ink truncate text-sm font-semibold tracking-tight">
+                  {branding.name}
+                </span>
               )}
             </div>
 

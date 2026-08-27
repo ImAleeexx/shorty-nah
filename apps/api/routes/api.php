@@ -152,6 +152,7 @@ Route::prefix('v1')->group(function (): void {
             // with a 423 the interface rendered nowhere.
             Route::put('/branding', [BrandingController::class, 'update'])->name('branding.update');
             Route::post('/branding/assets', [BrandingController::class, 'upload'])->name('branding.upload');
+            Route::delete('/branding/assets/{kind}', [BrandingController::class, 'removeAsset'])->name('branding.asset.remove');
 
             // Not behind recent authentication: the security contract enumerates the
             // operations that require it — email, password, second factor, API token
