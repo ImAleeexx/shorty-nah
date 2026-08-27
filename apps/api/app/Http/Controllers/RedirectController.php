@@ -7,7 +7,9 @@ namespace App\Http\Controllers;
 use App\Clicks\ClickEnvelope;
 use App\Clicks\ClickQueue;
 use App\Clicks\ClickToken;
+use App\Clicks\GeoResolver;
 use App\Clicks\InterstitialPresenter;
+use App\Clicks\VisitorHash;
 use App\Enums\RedirectMode;
 use App\Links\ClickCounter;
 use App\Links\RedirectResolver;
@@ -33,6 +35,8 @@ final class RedirectController
         private readonly ClickToken $tokens,
         private readonly InterstitialPresenter $interstitial,
         private readonly ClickQueue $clicks,
+        private readonly GeoResolver $geo,
+        private readonly VisitorHash $visitors,
     ) {}
 
     private const PASSWORD_MAX_ATTEMPTS = 8;
@@ -173,21 +177,31 @@ final class RedirectController
     }
 
     /**
-     * Pushes the envelope and returns. No enrichment, no database, no waiting:
-     * everything about this click is worked out later, so the event store being
-     * slow or unreachable cannot delay or break a redirect.
+     * Pushes the envelope and returns. Still no database and no waiting: the
+     * event store being slow or unreachable cannot delay or break a redirect.
+     *
+     * Geography and the visitor hash are the two exceptions to "worked out
+     * later", and both for the same reason. A country rule cannot be evaluated
+     * after the visitor has already been sent somewhere, so the lookup has to
+     * happen here — and once it has, keeping the address on the envelope would
+     * mean putting a raw address into Redis to answer a question already
+     * answered. The lookup is a memory-mapped read of a local file: no socket,
+     * no query.
      */
     private function record(Request $request, ResolvedLink $link, string $clickId): void
     {
+        $address = $request->ip();
+
         $this->clicks->push(new ClickEnvelope(
             clickId: $clickId,
             linkId: $link->id,
             domainId: $link->domainId,
             occurredAt: now()->format('Y-m-d H:i:s'),
-            address: $request->ip(),
             userAgent: $request->userAgent(),
             referrer: $request->headers->get('referer'),
             redirectMode: $link->mode->value,
+            geo: $this->geo->lookup($address),
+            visitorHash: $this->visitors->for($address, $request->userAgent()),
         ));
     }
 

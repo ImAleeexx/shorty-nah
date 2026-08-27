@@ -14,9 +14,12 @@ use App\Settings\SettingsStore;
  * lookup.
  *
  *   1. user agent — string matching, no I/O
- *   2. geography and network — file-backed lookup, only if still interesting
+ *   2. geography and network — read from the envelope, which the redirect path
+ *      resolved; looked up here only for envelopes predating that change, and
+ *      then only if the click is still interesting
  *   3. datacenter check — needs the network from step 2
- *   4. visitor hash — cheap, but pointless before we know we are keeping the row
+ *   4. visitor hash — likewise carried on the envelope, computed here only for
+ *      the legacy shape
  *   5. deduplication — needs the hash
  */
 final class ClickEnricher
@@ -44,16 +47,20 @@ final class ClickEnricher
             $reason = $client->botName;
         }
 
-        // A client already known to be automated does not need geography: this is
-        // the whole reason the order above is fixed.
-        $geo = $automated ? GeoResult::unknown() : $this->geo->lookup($envelope->address);
+        // Geography is resolved on the redirect path now, so ordinarily there is
+        // nothing to look up here. The fallback is for envelopes queued before
+        // that change: a deploy with a non-empty queue must drain them rather
+        // than write a batch of unknown countries. For those, the original
+        // ordering still holds — traffic already known to be automated pays for
+        // no lookup.
+        $geo = $envelope->geo ?? ($automated ? GeoResult::unknown() : $this->geo->lookup($envelope->address));
 
         if (! $automated && $filtering && DatacenterNetworks::isDatacenter($geo->asn)) {
             $automated = true;
             $reason = 'datacenter:'.(DatacenterNetworks::organisationFor($geo->asn) ?? (string) $geo->asn);
         }
 
-        $visitorHash = $this->visitors->for($envelope->address, $envelope->userAgent);
+        $visitorHash = $envelope->visitorHash ?? $this->visitors->for($envelope->address, $envelope->userAgent);
 
         // Automated traffic is not deduplicated: it is already excluded from
         // counts, and spending a cache write on it achieves nothing.
