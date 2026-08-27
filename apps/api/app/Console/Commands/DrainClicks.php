@@ -7,7 +7,9 @@ namespace App\Console\Commands;
 use App\Clicks\ClickEnricher;
 use App\Clicks\ClickQueue;
 use App\Clicks\ClickWriter;
+use App\Enums\WebhookEvent;
 use App\Links\ClickCounter;
+use App\Webhooks\WebhookService;
 use Illuminate\Console\Command;
 
 /**
@@ -51,6 +53,7 @@ final class DrainClicks extends Command
         ClickQueue $queue,
         ClickEnricher $enricher,
         ClickWriter $writer,
+        WebhookService $webhooks,
         ClickCounter $counter,
     ): int {
         $batch = max(1, (int) $this->option('batch'));
@@ -89,6 +92,13 @@ final class DrainClicks extends Command
             foreach ($enriched as $click) {
                 if ($click->isCounted()) {
                     $counted++;
+
+                    // Fired here rather than from the redirect, deliberately: a
+                    // webhook dispatched on the hot path would put an operator's
+                    // endpoint between a visitor and their destination. Only
+                    // counted clicks are delivered — a bot or a duplicate is not
+                    // an event anyone asked to hear about.
+                    $webhooks->dispatch(WebhookEvent::ClickRecorded, $click->toWebhookPayload());
                 }
             }
 

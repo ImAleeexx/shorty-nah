@@ -22,6 +22,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\TlsAuthorizationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WebhookController;
 use App\Http\Middleware\EnsureSetupIsOpen;
 use App\Http\Middleware\RequireInstallation;
 use App\Http\Middleware\RequireRecentAuthentication;
@@ -168,6 +169,12 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/domains/{domain}/verify', [DomainController::class, 'verify'])->name('domains.verify');
             Route::post('/domains/{domain}/promote', [DomainController::class, 'promote'])->name('domains.promote');
 
+            Route::get('/webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
+            Route::get('/webhooks/{endpoint}/deliveries', [WebhookController::class, 'deliveries'])->name('webhooks.deliveries');
+            Route::post('/webhooks', [WebhookController::class, 'store'])->name('webhooks.store');
+            Route::patch('/webhooks/{endpoint}', [WebhookController::class, 'update'])->name('webhooks.update');
+            Route::post('/webhooks/deliveries/{delivery}/replay', [WebhookController::class, 'replay'])->name('webhooks.replay');
+
             Route::get('/invitations', [InvitationController::class, 'index'])->name('invitations.index');
             Route::get('/tokens', [ApiTokenController::class, 'index'])->name('tokens.index');
 
@@ -184,6 +191,12 @@ Route::prefix('v1')->group(function (): void {
                     ->name('invitations.destroy');
 
                 Route::delete('/domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
+
+                // A signing secret is long-lived access to this instance's
+                // events, so issuing and destroying one sits with the API tokens
+                // rather than with instance configuration.
+                Route::post('/webhooks/{endpoint}/rotate', [WebhookController::class, 'rotate'])->name('webhooks.rotate');
+                Route::delete('/webhooks/{endpoint}', [WebhookController::class, 'destroy'])->name('webhooks.destroy');
 
                 Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');
                 Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');

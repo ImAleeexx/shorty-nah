@@ -44,6 +44,10 @@ enum AuditAction: string
     // differing. That is precisely what an audit log is for.
     case LinkRulesChanged = 'link.rules.changed';
 
+    case WebhookRegistered = 'webhook.registered';
+    case WebhookSecretRotated = 'webhook.secret.rotated';
+    case WebhookRemoved = 'webhook.removed';
+
     case AnalyticsExported = 'analytics.exported';
 
     case InstallationCompleted = 'instance.installed';

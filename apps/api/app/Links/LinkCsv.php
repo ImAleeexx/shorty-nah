@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Links;
 
+use App\Enums\RedirectMode;
 use App\Models\Link;
 
 /**
@@ -47,7 +48,7 @@ final class LinkCsv
         return [
             (string) $link->slug,
             (string) $link->destination,
-            $link->redirect_mode instanceof \App\Enums\RedirectMode ? $link->redirect_mode->value : '',
+            $link->redirect_mode instanceof RedirectMode ? $link->redirect_mode->value : '',
             $link->expires_at?->toIso8601String() ?? '',
             $link->max_clicks === null ? '' : (string) $link->max_clicks,
             $link->relationLoaded('tags')
