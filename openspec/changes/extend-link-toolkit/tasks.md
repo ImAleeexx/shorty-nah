@@ -64,18 +64,18 @@ path, and everything in phase 3 depends on it. A task's verification method is p
 
 ## 7. Outbound webhooks
 
-- [ ] 7.1 Add the endpoint and delivery tables, storing the signing secret hashed, and verify the secret is shown once at creation and never again
-- [ ] 7.2 Refuse an endpoint that is not HTTPS or resolves to a private, loopback or metadata address, and verify each refusal after DNS resolution rather than on the literal string
-- [ ] 7.3 Implement signed delivery on its own queue, and verify a receiver recomputing the HMAC over the body with its copy of the secret matches
-- [ ] 7.4 Verify a delivery does not delay the request that caused it: a redirect completes with an unreachable endpoint registered
-- [ ] 7.5 Fire click deliveries from the drain worker on the enriched click, and verify no delivery is attempted from the redirect path
-- [ ] 7.6 Implement bounded retries with increasing delay, and verify a delivery failing once and succeeding records both attempts
-- [ ] 7.7 Verify an exhausted delivery is recorded as failed and is not retried again automatically
-- [ ] 7.8 Implement replay, and verify a replayed delivery records a new attempt separately from the original
-- [ ] 7.9 Verify secret rotation: deliveries sign with the new secret and the previous one stops verifying
-- [ ] 7.10 Verify no payload carries an address, a link password, a session identifier or an issued secret
-- [ ] 7.11 Bound the delivery log by the existing retention setting, and verify records past it are removed on the same schedule as raw click events
-- [ ] 7.12 Record endpoint creation, secret rotation and removal in the audit log, and verify no entry carries the secret
+- [x] 7.1 Add the endpoint and delivery tables, storing the signing secret hashed, and verify the secret is shown once at creation and never again Done, but not as written. The task said the secret is stored hashed, copying the API-token contract, and that is impossible: an HMAC needs the value, and a hash cannot sign. It is encrypted at rest instead — the strongest treatment for a key that must be used rather than checked — and `design.md` and the spec now say so. Asserted by reading the raw column.
+- [x] 7.2 Refuse an endpoint that is not HTTPS or resolves to a private, loopback or metadata address, and verify each refusal after DNS resolution rather than on the literal string Done through the same resolution-time validator a link destination gets. An endpoint is a URL this instance fetches on a schedule nobody watches, which is the definition of an SSRF target.
+- [x] 7.3 Implement signed delivery on its own queue, and verify a receiver recomputing the HMAC over the body with its copy of the secret matches Done. The timestamp is inside the signed material, not merely beside it: signing the body alone leaves a captured delivery replayable against the receiver forever. Verified by recomputing the HMAC exactly as a receiver would.
+- [x] 7.4 Verify a delivery does not delay the request that caused it: a redirect completes with an unreachable endpoint registered Done.
+- [x] 7.5 Fire click deliveries from the drain worker on the enriched click, and verify no delivery is attempted from the redirect path Done, and only for counted clicks — a bot or a duplicate is not an event anyone asked to hear about. A webhook on the hot path would put an operator's endpoint between a visitor and their destination.
+- [x] 7.6 Implement bounded retries with increasing delay, and verify a delivery failing once and succeeding records both attempts Done: 4 tries, 10s/60s/300s backoff, on its own Horizon supervisor so a dead endpoint cannot sit in front of mail.
+- [x] 7.7 Verify an exhausted delivery is recorded as failed and is not retried again automatically Done.
+- [x] 7.8 Implement replay, and verify a replayed delivery records a new attempt separately from the original Done as a new record rather than a reset of the original: the original is the evidence the operator was looking at.
+- [x] 7.9 Verify secret rotation: deliveries sign with the new secret and the previous one stops verifying Done.
+- [x] 7.10 Verify no payload carries an address, a link password, a session identifier or an issued secret Done. The payload is a deliberate subset of the row — no visitor hash, which is an identifier this instance chose not to be able to reverse and has no business handing out.
+- [x] 7.11 Bound the delivery log by the existing retention setting, and verify records past it are removed on the same schedule as raw click events Done on the same schedule as raw events. A delivery holds a payload, so a busy endpoint accumulates faster than the events do.
+- [x] 7.12 Record endpoint creation, secret rotation and removal in the audit log, and verify no entry carries the secret Done.
 
 ## 8. Interface
 

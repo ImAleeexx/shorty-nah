@@ -228,6 +228,23 @@ return [
             'nice' => 0,
         ],
 
+        // Its own supervisor, not a share of `default`: a slow or dead operator
+        // endpoint would otherwise sit in front of mail and everything else, and
+        // a misconfigured receiver would become this instance's problem.
+        'webhooks' => [
+            'connection' => 'redis',
+            'queue' => ['webhooks'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 4,
+            'timeout' => 45,
+            'nice' => 0,
+        ],
+
         'mail' => [
             'connection' => 'redis',
             'queue' => ['mail'],

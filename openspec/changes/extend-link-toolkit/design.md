@@ -124,8 +124,19 @@ value after the fact means re-parsing the destination, which the builder does.
 ## Decision: webhook delivery is a queued job per endpoint per event
 
 Deliveries go through Horizon on their own queue, so a slow or dead endpoint cannot delay clicks or mail.
-Each delivery is signed with an HMAC over the raw body using a per-endpoint secret, shown once at
-creation and stored hashed — the same contract as API tokens.
+Each delivery is signed with an HMAC over the timestamp and the raw body using a per-endpoint secret,
+shown once at creation.
+
+**Corrected while implementing.** This said "stored hashed — the same contract as API tokens", and that
+is impossible. Every other issued secret in this instance is *verified*: the plaintext arrives, and a
+one-way hash is compared against it, which is strictly better than keeping the value. A signing secret
+is different in kind — the instance has to compute an HMAC with it on every delivery, and a hash cannot
+sign. It is stored **encrypted** instead, which is the strongest available treatment for a key that must
+be used rather than checked: a database dump alone yields nothing without `APP_KEY`. It is still shown
+once and never again, and rotating issues a new one.
+
+The timestamp is inside the signed material rather than merely beside it. Signing the body alone leaves
+a captured delivery replayable against the receiver forever.
 
 Retries are bounded and backed off, and a delivery that exhausts them is recorded as failed rather than
 discarded, because an operator debugging a missed event needs to see the attempt. The delivery log is

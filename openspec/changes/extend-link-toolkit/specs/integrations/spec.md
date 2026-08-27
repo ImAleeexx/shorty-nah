@@ -7,7 +7,10 @@ authenticated, and what happens when one fails.
 
 ### Requirement: An operator may register webhook endpoints
 The system SHALL allow an operator to register HTTPS endpoints, choose which events each receives, issue
-a signing secret shown once at creation, and disable or remove an endpoint.
+a signing secret shown once at creation and stored encrypted at rest, and disable or remove an endpoint.
+
+A signing secret is deliberately encrypted rather than hashed, unlike every other issued secret here: it
+is used to compute an HMAC on every delivery, and a hash cannot sign.
 
 #### Scenario: An endpoint is registered
 - **WHEN** an operator registers an endpoint and selects its events
@@ -16,6 +19,10 @@ a signing secret shown once at creation, and disable or remove an endpoint.
 #### Scenario: The secret is requested again
 - **WHEN** an operator views an endpoint after creating it
 - **THEN** the signing secret is not shown, and only a newly rotated secret can be seen again
+
+#### Scenario: The database is read without the application key
+- **WHEN** the endpoint table is read outside the application
+- **THEN** the stored secret is unusable without the application key
 
 #### Scenario: An endpoint that is not HTTPS
 - **WHEN** an operator registers an endpoint that is not HTTPS, or that resolves to a private, loopback or metadata address

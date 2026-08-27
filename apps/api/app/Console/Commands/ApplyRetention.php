@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\ClickHouse\ClickHouseException;
 use App\Clicks\ClickWriter;
+use App\Models\WebhookDelivery;
 use App\Providers\ClickHouseServiceProvider;
 use App\Settings\SettingsStore;
 use Illuminate\Console\Command;
@@ -69,6 +70,16 @@ final class ApplyRetention extends Command
         }
 
         $this->components->info("Raw events now expire after {$days} day(s). Rollups are unaffected.");
+        // The delivery log is bounded by the same setting that bounds raw events.
+        // It holds a payload per delivery, so an instance with a busy endpoint
+        // accumulates faster than the events themselves do.
+        $pruned = WebhookDelivery::query()
+            ->where('created_at', '<', now()->subDays($days))
+            ->delete();
+
+        if ($pruned > 0) {
+            $this->components->info("Removed {$pruned} webhook delivery record(s) past retention.");
+        }
 
         return self::SUCCESS;
     }

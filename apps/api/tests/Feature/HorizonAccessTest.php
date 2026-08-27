@@ -28,7 +28,11 @@ it('configures a supervisor per queue', function (): void {
     /** @var array<string, mixed> $defaults */
     $defaults = config('horizon.defaults');
 
-    expect(array_keys($defaults))->toBe(['clicks', 'default', 'mail']);
+    // Webhooks get their own supervisor rather than a share of `default`: a
+    // slow or dead operator endpoint would otherwise sit in front of mail and
+    // everything else, and a misconfigured receiver would become this instance's
+    // problem.
+    expect(array_keys($defaults))->toBe(['clicks', 'default', 'webhooks', 'mail']);
 
     foreach ($defaults as $supervisor) {
         expect($supervisor['connection'])->toBe('redis');

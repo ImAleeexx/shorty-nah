@@ -70,6 +70,36 @@ final class EnrichedClick
         ];
     }
 
+    /**
+     * What a subscriber is told about a click.
+     *
+     * A deliberate subset of the row, not the row itself: no visitor hash, which
+     * is an identifier this instance chose not to be able to reverse and has no
+     * business handing out, and no address, which does not exist by this point
+     * anyway.
+     *
+     * @return array<string, mixed>
+     */
+    public function toWebhookPayload(): array
+    {
+        return [
+            'click_id' => $this->envelope->clickId,
+            'link_id' => $this->envelope->linkId,
+            'domain_id' => $this->envelope->domainId,
+            'occurred_at' => $this->envelope->occurredAt,
+            'redirect_mode' => $this->envelope->redirectMode,
+            'source' => $this->envelope->source,
+            'country_code' => $this->geo->countryCode,
+            'region' => $this->geo->region,
+            'city' => $this->geo->city,
+            'asn' => $this->geo->asn,
+            'device_type' => $this->client->deviceType,
+            'operating_system' => $this->client->operatingSystem,
+            'browser' => $this->client->browser,
+            'referrer_host' => $this->referrerHost(),
+        ];
+    }
+
     public function isCounted(): bool
     {
         return ! $this->isAutomated && ! $this->isDuplicate;
