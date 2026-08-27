@@ -1,7 +1,7 @@
 # Internal development docs — local only, never published
 /docs/
 
-# Vendored agent skills — local tooling, restored per CLAUDE.md, never published
+# Agent tooling and internal working notes: local to a checkout, never published
 /.agents/
 /.claude/skills/
 
@@ -51,3 +51,12 @@ Thumbs.db
 *.swp
 run/
 backups/
+
+# Specifications and agent-facing notes are kept locally and out of this
+# repository. They are working material, not something a reader of the code
+# needs, and the code is meant to stand on its own.
+/openspec/
+/CLAUDE.md
+/apps/*/CLAUDE.md
+/apps/*/AGENTS.md
+/.claude/

@@ -176,12 +176,9 @@ make e2e         # the browser suite, wizard first
 make scan        # dependency, secret and image scanning
 ```
 
-More detail — including the traps that cost real time — is in `CLAUDE.md`.
-
 ## Security
 
-The contract is in `openspec/changes/bootstrap-url-shortener/specs/security/`.
-The parts worth knowing without reading it:
+The parts worth knowing:
 
 - Unauthorized reads answer `404`, never `403`. A `403` confirms the object
   exists.
