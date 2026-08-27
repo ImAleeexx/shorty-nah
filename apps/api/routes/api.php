@@ -15,6 +15,7 @@ use App\Http\Controllers\DomainController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\LinkRuleController;
+use App\Http\Controllers\LinkTransferController;
 use App\Http\Controllers\PublicConfigurationController;
 use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\SettingsController;
@@ -111,6 +112,13 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 
             Route::get('/links', [LinkController::class, 'index'])->name('links.index');
+            // Before /links/{link}, or the router matches `export` and `imports`
+            // as link identifiers and every bulk request answers 404.
+            Route::get('/links/export', [LinkTransferController::class, 'export'])->name('links.export.csv');
+            Route::post('/links/import', [LinkTransferController::class, 'import'])->name('links.import');
+            Route::get('/links/imports/{import}', [LinkTransferController::class, 'show'])->name('links.import.show');
+            Route::get('/links/imports/{import}/result', [LinkTransferController::class, 'result'])->name('links.import.result');
+
             Route::get('/links/{link}', [LinkController::class, 'show'])->name('links.show');
             Route::post('/links', [LinkController::class, 'store'])->name('links.store');
             Route::patch('/links/{link}', [LinkController::class, 'update'])->name('links.update');

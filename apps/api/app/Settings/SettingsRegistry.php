@@ -151,6 +151,12 @@ final class SettingsRegistry
             new Setting('slug.length', SettingType::Integer, 7),
             new Setting('link.destination_blocklist', SettingType::String),
 
+            // Campaign presets, as JSON in one string setting rather than a
+            // table. They are a list of named defaults an operator edits
+            // occasionally and the link form reads — no relations, no
+            // per-preset authorization, and nothing else joins to them.
+            new Setting('link.campaign_presets', SettingType::String, '[]', writable: true),
+
             // --- Analytics. Operational knobs, deliberately not exposed. ---
             new Setting('analytics.retention_days', SettingType::Integer, 365, writable: true),
             new Setting('analytics.bot_filtering', SettingType::Boolean, true, writable: true),
