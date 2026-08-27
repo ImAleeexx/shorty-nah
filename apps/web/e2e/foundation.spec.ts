@@ -272,8 +272,15 @@ test.describe('design foundation', () => {
 
     const stack = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
 
+    // Compared as whole family names, not substrings. Geist Mono's own fallback
+    // chain names "Roboto Mono", which a substring check reads as Roboto and
+    // fails on — an instance whose operator chose the mono face would look like
+    // a violation of a rule it is keeping. The ban is on these families, not on
+    // every family whose name contains one of them.
+    const families = stack.split(',').map((family) => family.trim().replace(/^["']|["']$/g, ''));
+
     for (const banned of ['Inter', 'Roboto', 'Helvetica', 'Open Sans', 'Arial']) {
-      expect(stack).not.toContain(banned);
+      expect(families).not.toContain(banned);
     }
 
     expect(stack).toContain('Geist');

@@ -147,6 +147,14 @@ job is pushed to Redis — and completely invisible under the sync queue driver 
 test suite uses. Every import failed with a `500` in a real browser while the
 whole API suite passed.
 
+**A route-level `loading.tsx` breaks every status code on that segment.** It puts
+the segment behind a Suspense boundary, so Next streams the response — and once
+the shell has flushed with a `200`, a `redirect()` or `notFound()` later in the
+render cannot change it. Every page here checks the session while rendering, so a
+root `loading.tsx` turned a signed-out request for the dashboard into a `200` and
+an installed instance's `/setup` into a `200` rendering the 404 page. Skeletons
+belong inside a page, below the session check, not at the segment root.
+
 **A browser-side write needs the CSRF handshake.** The API runs a session on
 every route, so a cookie-authenticated `POST` without an `X-XSRF-TOKEN` header is
 refused with `419`. A client must `GET /sanctum/csrf-cookie` first and echo the

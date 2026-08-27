@@ -165,6 +165,20 @@ body {
   outline-offset: 2px;
 }
 
+/* Headings break where a reader would break them rather than where the box ends,
+   so a title does not leave one word alone on its own line. Applied to headings
+   only — `balance` is bounded to a few lines by the specification, and paragraphs
+   get `pretty`, which fixes the orphan without re-flowing the whole block. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
 /*
  * Reduced motion means gentler, not none.
  *
