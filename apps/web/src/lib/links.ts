@@ -26,6 +26,10 @@ export type DomainRecord = {
   host: string;
   verified: boolean;
   primary: boolean;
+  serves_links: boolean;
+  link_count: number;
+  last_checked_at: string | null;
+  last_failure: string | null;
 };
 
 /**

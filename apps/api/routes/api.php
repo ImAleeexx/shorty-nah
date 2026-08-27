@@ -120,6 +120,14 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('/branding', [BrandingController::class, 'show'])->name('branding.show');
 
+            // Not behind recent authentication, and the comment below is why: the
+            // contract names email, password, second factor, API token and domain
+            // deletion, and branding is none of them. It sat in that group anyway,
+            // so every save more than fifteen minutes after signing in was refused
+            // with a 423 the interface rendered nowhere.
+            Route::put('/branding', [BrandingController::class, 'update'])->name('branding.update');
+            Route::post('/branding/assets', [BrandingController::class, 'upload'])->name('branding.upload');
+
             // Not behind recent authentication: the security contract enumerates the
             // operations that require it — email, password, second factor, API token
             // and domain deletion — and instance configuration is not one of them.
@@ -131,6 +139,13 @@ Route::prefix('v1')->group(function (): void {
             Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
             Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
+
+            // Registering, proving and promoting a domain are instance
+            // configuration. Deleting one is the operation the contract names, and
+            // it keeps the challenge below — it destroys the links it served.
+            Route::post('/domains', [DomainController::class, 'store'])->name('domains.store');
+            Route::post('/domains/{domain}/verify', [DomainController::class, 'verify'])->name('domains.verify');
+            Route::post('/domains/{domain}/promote', [DomainController::class, 'promote'])->name('domains.promote');
 
             Route::get('/invitations', [InvitationController::class, 'index'])->name('invitations.index');
             Route::get('/tokens', [ApiTokenController::class, 'index'])->name('tokens.index');
@@ -147,12 +162,6 @@ Route::prefix('v1')->group(function (): void {
                 Route::delete('/invitations/{invitation}', [InvitationController::class, 'destroy'])
                     ->name('invitations.destroy');
 
-                Route::put('/branding', [BrandingController::class, 'update'])->name('branding.update');
-                Route::post('/branding/assets', [BrandingController::class, 'upload'])->name('branding.upload');
-
-                Route::post('/domains', [DomainController::class, 'store'])->name('domains.store');
-                Route::post('/domains/{domain}/verify', [DomainController::class, 'verify'])->name('domains.verify');
-                Route::post('/domains/{domain}/promote', [DomainController::class, 'promote'])->name('domains.promote');
                 Route::delete('/domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
 
                 Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');

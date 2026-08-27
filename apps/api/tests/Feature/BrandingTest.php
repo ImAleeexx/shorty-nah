@@ -301,3 +301,29 @@ it('refuses a footer longer than the field allows', function (): void {
         ->assertStatus(422)
         ->assertJsonValidationErrors('footer_text');
 });
+
+// Every other test in this file signs its administrator in fresh, which is why
+// the suite stayed green while the interface could not save branding at all: the
+// route sat behind recent authentication, so a save fifteen minutes after
+// signing in was refused. The security contract enumerates what requires it —
+// email, password, second factor, API token and domain deletion — and instance
+// configuration is not on that list.
+it('saves branding with a session older than the re-authentication window', function (): void {
+    $admin = User::factory()->staleAuthentication()->create(['role' => Role::Admin]);
+
+    $this->actingAs($admin)
+        ->putJson('/api/v1/branding', ['name' => 'Saved While Stale', 'radius' => 10])
+        ->assertOk();
+
+    expect(app(SettingsStore::class)->string('instance.name'))->toBe('Saved While Stale');
+});
+
+it('uploads a branding asset with a session older than the window', function (): void {
+    Storage::fake('public');
+
+    $admin = User::factory()->staleAuthentication()->create(['role' => Role::Admin]);
+
+    $this->actingAs($admin)
+        ->post('/api/v1/branding/assets', ['kind' => 'logo', 'asset' => imageFile('logo.png')])
+        ->assertCreated();
+});

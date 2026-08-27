@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Warning } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/field';
+import { FormError } from '@/components/ui/form-error';
 import { RADIUS_MAX, RADIUS_MIN, TYPEFACE_STACKS, typefaceStack } from '@/lib/branding';
 import { apiRequest, type ApiFailure } from '@/lib/client-api';
 import {
@@ -90,6 +91,8 @@ export function BrandingEditor({
 
   return (
     <div className="flex flex-col gap-5">
+      <FormError failure={failure} />
+
       <Field label="Instance name" error={failure?.errors.name?.[0]}>
         {({ id, describedBy }) => (
           <Input

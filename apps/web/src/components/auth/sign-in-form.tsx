@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/field';
+import { FormError } from '@/components/ui/form-error';
 import { apiRequest, type ApiFailure } from '@/lib/client-api';
 
 export function SignInForm() {
@@ -86,6 +87,8 @@ export function SignInForm() {
   if (challenge) {
     return (
       <form className="flex flex-col gap-5" onSubmit={satisfy} data-testid="two-factor-challenge">
+        <FormError failure={failure} />
+
         <p className="text-ink-muted text-sm">
           Enter the code from your authenticator, or a recovery code if you cannot reach it.
         </p>
@@ -135,6 +138,8 @@ export function SignInForm() {
 
   return (
     <form className="flex flex-col gap-5" onSubmit={submit}>
+      <FormError failure={failure} />
+
       <Field label="Email" error={failure?.errors.email?.[0]}>
         {({ id, describedBy }) => (
           <Input

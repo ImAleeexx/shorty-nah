@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 
 import { AppShell } from '@/components/app-shell';
 import { BrandingEditor } from '@/components/settings/branding-editor';
+import { DomainManager } from '@/components/settings/domain-manager';
 import { SettingsForm, type SettingsValues } from '@/components/settings/settings-form';
 import { Card, CardBody, CardHeader } from '@/components/ui/card';
 import { fetchPublicConfiguration } from '@/lib/api';
@@ -188,27 +189,7 @@ export default async function SettingsPage() {
             description="Short domains this instance serves. A domain must verify before it resolves."
           />
           <CardBody>
-            {domains.ok && domains.data.domains.length > 0 ? (
-              <ul className="border-border divide-border divide-y rounded-(--radius-token) border">
-                {domains.data.domains.map((domain) => (
-                  <li
-                    key={domain.id}
-                    className="flex items-center justify-between gap-4 px-4 py-3"
-                    data-testid="domain-row"
-                  >
-                    <span className="text-ink text-sm">{domain.host}</span>
-                    <span className="flex items-center gap-3 text-xs">
-                      {domain.primary ? <span className="text-ink-muted">primary</span> : null}
-                      <span className={domain.verified ? 'text-ink-muted' : 'text-critical'}>
-                        {domain.verified ? 'verified' : 'unverified'}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-ink-muted text-sm">No domains registered.</p>
-            )}
+            <DomainManager domains={domains.ok ? domains.data.domains : []} />
           </CardBody>
         </Card>
       </div>

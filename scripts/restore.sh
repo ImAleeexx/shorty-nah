@@ -58,6 +58,29 @@ printf 'Application data...\n'
 "${COMPOSE[@]}" exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
     psql --quiet -v ON_ERROR_STOP=1 -U "$DB_USERNAME" -d "$DB_DATABASE" < "$STAGE/postgres.sql" >/dev/null
 
+# The dump is taken with --no-privileges and applied with --clean, so every table
+# is dropped and recreated carrying whatever the application role holds by
+# default. That silently discards the targeted REVOKE that makes the audit log
+# append-only — the enforcement is the missing grant, not a guard in code, so
+# losing it turns the audit trail into an ordinary editable table.
+printf 'Re-applying the audit log grant policy...\n'
+
+"${COMPOSE[@]}" exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
+    psql --quiet -v ON_ERROR_STOP=1 -U "$DB_USERNAME" -d "$DB_DATABASE" \
+    -c "REVOKE UPDATE, DELETE, TRUNCATE ON audit_entries FROM \"${DB_APP_USERNAME}\"" >/dev/null
+
+# Asserted, because Postgres treats a REVOKE issued by a non-owner as a warning
+# rather than an error: without this check a restore that failed to re-harden the
+# table would report success.
+remaining=$("${COMPOSE[@]}" exec -T -e PGPASSWORD="$DB_PASSWORD" postgres \
+    psql --quiet --tuples-only --no-align -U "$DB_USERNAME" -d "$DB_DATABASE" \
+    -c "select count(*) from information_schema.role_table_grants where table_name='audit_entries' and grantee='${DB_APP_USERNAME}' and privilege_type in ('UPDATE','DELETE','TRUNCATE')" | tr -d '[:space:]')
+
+if [[ "$remaining" != "0" ]]; then
+    printf '\nThe audit log could not be made append-only again: %s grant(s) remain.\n' "$remaining" >&2
+    exit 1
+fi
+
 printf 'Click events...\n'
 # Truncated first so a restore is a replacement rather than a merge, and the
 # materialized rollups rebuild from the inserted rows.
