@@ -23,38 +23,37 @@ repository — not a thing that was awkward.
 
 ## Deliberate exceptions
 
-Two. Each needs something this repository cannot contain, and each names what
-would close it.
+One. It needs something this repository cannot contain, and names what would
+close it.
 
-Geographic resolution used to be a third. It is now proved against the real
+Certificate issuance used to be one of them, on the assumption that it needed a
+publicly reachable host. It does not: the DNS-01 challenge is answered with a TXT
+record in the zone rather than a connection to the instance, so a host with no
+open ports can hold a certificate from a real authority. Verified end to end —
+`go.bfsqd.es` was issued by Let's Encrypt against an instance publishing nothing,
+and an unregistered hostname produced no ACME order at all, because the edge asks
+the application first.
+
+Geographic resolution used to be another. It is now proved against the real
 GeoLite2 databases by `GeoResolutionTest`, which reads what the sidecar
 downloads and skips where they are absent — an instance without a MaxMind
 licence is a supported configuration, not a broken one.
-
-### Certificate issuance on first request — `deployment`
-
-> **WHEN** an administrator registers and verifies a new short domain
-> **THEN** the system obtains a certificate for it on first request
-
-Automatic issuance needs public DNS pointing at the instance and a real
-certificate authority. What is proved instead: the edge asks the API before
-issuing, and the API answers `200` for a verified host and `404` for an unknown
-one, over the Compose network, with the ask URL matching the registered route
-(`DomainTest`, task 6.4). The remaining step is ACME itself.
-
-**Closes when** the instance is deployed on a host with a public DNS name.
 
 ### Certificate renewal — `deployment`
 
 > **WHEN** an existing certificate approaches expiry
 > **THEN** the system renews it without interrupting service
 
-Renewal is Caddy's, on a timer measured in weeks. There is no way to observe it
-in a test that finishes. The configuration that governs it is validated
-(`caddy validate` in CI), which is the part this repository owns.
+Renewal is Caddy's, on a timer measured in weeks. What is proved: the certificate
+for `go.bfsqd.es` is held with a renewal window the authority itself supplied
+through ACME Renewal Information, and Caddy scheduled a time inside it — so the
+renewal is not merely assumed to be configured, it is booked. What is not proved
+is the renewal happening, because the certificate is valid for ninety days and
+Caddy acts around thirty days out. Nobody can watch that in a sitting.
 
-**Closes when** an instance has been running long enough to renew, on the same
-public host as above.
+**Closes when** an instance has been running long enough to renew, or against a
+test authority issuing minute-long certificates — which would make the loop
+observable without waiting, at the cost of not being Let's Encrypt.
 
 ## Not exceptions, though they look like ones
 

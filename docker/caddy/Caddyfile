@@ -5,6 +5,12 @@
 
 	email {$CADDY_ACME_EMAIL}
 
+	# Expands to an acme_dns directive when a DNS provider is configured, and to
+	# nothing when one is not. HTTP-01 and TLS-ALPN-01 both need the instance
+	# reachable from the internet on 80 or 443; a single host behind a router
+	# usually is not, and DNS-01 asks for a TXT record instead of a connection.
+	{$CADDY_ACME_DNS}
+
 	# Certificates for operator-registered short domains are issued on demand,
 	# but only for hostnames the application confirms it serves. Without this
 	# gate any hostname pointed at the instance would trigger an issuance

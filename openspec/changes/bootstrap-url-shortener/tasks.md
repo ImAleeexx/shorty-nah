@@ -61,7 +61,7 @@
 - [x] 6.1 Implement the domain resource with primary designation and the refusal to delete the primary or a domain still holding links, and verify the primary refusal by test. The link-count guard is implemented and schema-aware rather than stubbed to zero, but its refusal cannot be exercised until the links table exists — asserted in 7.11
 - [x] 6.2 Implement domain verification and the refusal to serve unverified domains, and verify a slug on an unverified domain returns not-found
 - [x] 6.3 Implement the certificate authorization endpoint reading the Redis-cached domain list, rate limited, and verify it approves registered hostnames and declines unknown ones
-- [x] 6.4 Wire Caddy on-demand TLS to that endpoint and verify the edge container reaches it over the compose network, receiving 200 for a verified host and 404 for an unknown one, with the ask URL matching the registered route. Live ACME issuance needs public DNS and a real certificate authority, so it is verified on a deployed host in 19.3 rather than claimed here
+- [x] 6.4 Wire Caddy on-demand TLS to that endpoint and verify the edge container reaches it over the compose network, receiving 200 for a verified host and 404 for an unknown one, with the ask URL matching the registered route. Live ACME issuance is now verified: with a DNS-01 provider configured the edge obtained a Let's Encrypt certificate for a registered short domain against an instance publishing no ports at all, and an unregistered hostname produced no ACME order because the ask gate answered 404 first. The assumption that this needed a publicly reachable host was wrong — DNS-01 is answered with a TXT record, not a connection
 
 ## 7. Link management
 
