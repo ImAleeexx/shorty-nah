@@ -82,7 +82,43 @@ final class ContrastCheck
      *
      * @param  array{0: float, 1: float, 2: float}  $oklch
      */
-    private static function luminance(array $oklch): float
+    /**
+     * The accent as sRGB bytes.
+     *
+     * Public because a QR code has to be drawn in it, and re-deriving the same
+     * conversion beside this one is how two answers to the same question start
+     * disagreeing.
+     *
+     * @param  array{float, float, float}  $oklch
+     * @return array{int, int, int}
+     */
+    public static function toRgb(array $oklch): array
+    {
+        [$red, $green, $blue] = self::linear($oklch);
+
+        return [
+            (int) round(self::encodeChannel($red) * 255),
+            (int) round(self::encodeChannel($green) * 255),
+            (int) round(self::encodeChannel($blue) * 255),
+        ];
+    }
+
+    /**
+     * Contrast against white specifically, which is the surface a printed or
+     * pasted code sits on far more often than the interface's own canvas.
+     *
+     * @param  array{float, float, float}  $oklch
+     */
+    public static function ratioAgainstWhite(array $oklch): float
+    {
+        return (1.0 + 0.05) / (self::luminance($oklch) + 0.05);
+    }
+
+    /**
+     * @param  array{float, float, float}  $oklch
+     * @return array{float, float, float}
+     */
+    private static function linear(array $oklch): array
     {
         [$l, $c, $h] = $oklch;
 
@@ -98,9 +134,32 @@ final class ContrastCheck
         $mc = $mp ** 3;
         $sc = $sp ** 3;
 
-        $red = 4.0767416621 * $lc - 3.3077115913 * $mc + 0.2309699292 * $sc;
-        $green = -1.2684380046 * $lc + 2.6097574011 * $mc - 0.3413193965 * $sc;
-        $blue = -0.0041960863 * $lc - 0.7034186147 * $mc + 1.7076147010 * $sc;
+        return [
+            4.0767416621 * $lc - 3.3077115913 * $mc + 0.2309699292 * $sc,
+            -1.2684380046 * $lc + 2.6097574011 * $mc - 0.3413193965 * $sc,
+            -0.0041960863 * $lc - 0.7034186147 * $mc + 1.7076147010 * $sc,
+        ];
+    }
+
+    /**
+     * Linear light to an sRGB channel. Only the byte conversion needs this — the
+     * luminance below is defined on linear values and must not use it.
+     */
+    private static function encodeChannel(float $value): float
+    {
+        $clamped = self::clamp($value);
+
+        return $clamped <= 0.0031308
+            ? $clamped * 12.92
+            : 1.055 * $clamped ** (1 / 2.4) - 0.055;
+    }
+
+    /**
+     * @param  array{float, float, float}  $oklch
+     */
+    private static function luminance(array $oklch): float
+    {
+        [$red, $green, $blue] = self::linear($oklch);
 
         return 0.2126 * self::clamp($red) + 0.7152 * self::clamp($green) + 0.0722 * self::clamp($blue);
     }

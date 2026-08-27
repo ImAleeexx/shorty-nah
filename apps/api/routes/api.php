@@ -16,6 +16,7 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\LinkRuleController;
 use App\Http\Controllers\PublicConfigurationController;
+use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\TlsAuthorizationController;
@@ -118,6 +119,11 @@ Route::prefix('v1')->group(function (): void {
             // Read and written as an ordered set: position is the semantics, and
             // reordering one rule at a time would pass through states the unique
             // position constraint refuses.
+            // Rendered on request, never stored: a code is derived from the short
+            // URL and the accent, and a stored image is a stale image waiting to
+            // be served after a rebrand.
+            Route::get('/links/{link}/qr', [QrCodeController::class, 'show'])->name('links.qr');
+
             Route::get('/links/{link}/rules', [LinkRuleController::class, 'index'])->name('links.rules.index');
             Route::put('/links/{link}/rules', [LinkRuleController::class, 'replace'])->name('links.rules.replace');
 

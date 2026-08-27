@@ -55,11 +55,26 @@ would measure the per-source rate limiter refusing the request rather than the
 redirect serving it — which is exactly how an early run of this harness reported
 a pass that was really a `429`.
 
+### The mean was the wrong statistic
+
+The budget was first written against the mean, and as a gate it was useless. Five
+runs of *identical* code produced deltas from +33us to +195us, so a 150us budget
+failed two runs in five with nothing changed at all. A latency mean is dominated
+by its outliers — a garbage collection, or the container losing its scheduling
+slice, moves it far more than any code here does — and a gate that fails at
+random is a gate everyone learns to pass by re-running.
+
+The comparison is on the **median**. Five runs of identical code then spread
++64.83 to +94.21us: a 30us band rather than a 160us one, which is a number a
+budget can actually be set against. The budget stays at 150us and now means
+something.
+
 ### Measured after the move
 
-Three runs against the recorded baseline of 540.26us, with real GeoLite2 City and
-ASN databases present: **+104.35us, +76.81us, +45.82us**. Inside the 150us budget
-on every run.
+Against the recorded baseline (mean 540.26us, p50 530.67us), with real GeoLite2
+City and ASN databases present, the redirect path costs **+65 to +94us on the
+median** — measured after rules and the scan marker were added too, so that
+figure covers everything this change puts on the path, not the geography alone.
 
 That is more than an mmdb read alone accounts for, and the reason is worth
 recording: the redirect now performs *two* lookups (city and ASN) and computes

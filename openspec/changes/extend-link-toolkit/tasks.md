@@ -6,7 +6,7 @@ path, and everything in phase 3 depends on it. A task's verification method is p
 ## 1. Baseline
 
 - [x] 1.1 Record a benchmark of the redirect hot path against a cached link before any change, in the same conditions the after-measurement will use, and commit the numbers and the method so the comparison is reproducible rather than remembered. Three runs recorded in `design.md`; the harness drives 256 addresses because one address measures the per-source limiter instead — an early run reported a pass that was really a `429`
-- [x] 1.2 State the added-cost budget for geographic resolution in `design.md` as a number, and verify the benchmark harness fails when the budget is exceeded by temporarily setting it below the measured baseline. Confirmed: an impossible budget exits 1 and names the overrun. The budget is 150us and `design.md` states plainly that this cannot resolve the mmdb read itself — run-to-run noise is ~70us — only an order-of-magnitude regression such as a network call arriving on the path
+- [x] 1.2 State the added-cost budget for geographic resolution in `design.md` as a number, and verify the benchmark harness fails when the budget is exceeded by temporarily setting it below the measured baseline. Confirmed: an impossible budget exits 1 and names the overrun. The budget is 150us and `design.md` states plainly that this cannot resolve the mmdb read itself — run-to-run noise is ~70us — only an order-of-magnitude regression such as a network call arriving on the path. Corrected later: the budget was written against the mean and failed two runs in five on unchanged code, because a latency mean is outlier-dominated. It compares the median now, which spreads 30us instead of 160us
 
 ## 2. Geography on the redirect path
 
@@ -36,11 +36,11 @@ path, and everything in phase 3 depends on it. A task's verification method is p
 
 ## 4. QR codes
 
-- [ ] 4.1 Add QR rendering from the instance branding producing PNG and SVG, and verify the encoded payload is the link's short URL on its own domain
-- [ ] 4.2 Fall back to ink when the configured accent would render below scannable contrast, and verify the fallback triggers on a low-contrast accent and reports that it did
-- [ ] 4.3 Mark the encoded URL so a resulting click is attributed as a scan, and verify the click is counted once in the total and reported separately
-- [ ] 4.4 Verify a QR request for a link outside the account's scope answers as though the link does not exist
-- [ ] 4.5 Verify a branding change is reflected in a newly requested code without a rebuild
+- [x] 4.1 Add QR rendering from the instance branding producing PNG and SVG, and verify the encoded payload is the link's short URL on its own domain Done. Bacon encodes and this draws: the library ships an Imagick back end and the image has GD, but drawing both formats from the one matrix is the only way the PNG and the SVG are guaranteed to be the same code. Verified by sampling every module centre out of the rendered PNG and comparing it to the encoder's matrix — non-vacuous, since shifting the quiet zone by one module fails it.
+- [x] 4.2 Fall back to ink when the configured accent would render below scannable contrast, and verify the fallback triggers on a low-contrast accent and reports that it did Done at 4.5:1 against white, higher than the 3:1 the interface enforces for text: a scanner thresholds an image taken under unknown light at an angle, and a code that fails to scan fails silently.
+- [x] 4.3 Mark the encoded URL so a resulting click is attributed as a scan, and verify the click is counted once in the total and reported separately Done with a `source` column rather than a referrer convention — a scan has no referrer, because a camera is not a page. `scans` counts beside `counted`, not instead of it.
+- [x] 4.4 Verify a QR request for a link outside the account's scope answers as though the link does not exist Done.
+- [x] 4.5 Verify a branding change is reflected in a newly requested code without a rebuild Done; nothing is cached to disk, because a stored code is a stale code waiting to be served after a rebrand.
 
 ## 5. Campaign parameters
 
