@@ -15,7 +15,12 @@ describe('FormError', () => {
   it('renders a refusal that names no field', () => {
     render(
       <FormError
-        failure={{ ok: false, status: 423, message: 'Confirm your password to continue.', errors: {} }}
+        failure={{
+          ok: false,
+          status: 423,
+          message: 'Confirm your password to continue.',
+          errors: {},
+        }}
       />,
     );
 

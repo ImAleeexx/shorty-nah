@@ -78,7 +78,8 @@ const eslintConfig = defineConfig([
           // duration silently resolves to zero — which is how every transition
           // in this interface came to be instant without anything failing.
           selector: 'Literal[value=/duration-\\[--/]',
-          message: 'Read a duration token through parentheses: duration-(--name). In brackets it resolves to 0s in Tailwind v4.',
+          message:
+            'Read a duration token through parentheses: duration-(--name). In brackets it resolves to 0s in Tailwind v4.',
         },
         {
           selector: 'Literal[value=/scale\\(0(\\.0+)?\\)/]',

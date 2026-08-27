@@ -14,12 +14,19 @@ printf 'API dependencies\n'
 
 # Composer has no severity threshold, only an ignore list, so the levels below
 # high are named explicitly.
+# --locked audits the lock file rather than an installed tree. It is what a
+# supply-chain scan wants anyway — the declared versions, not whatever happens to
+# be on this machine — and without it the audit refuses to run at all on a fresh
+# checkout, exiting non-zero with "No installed packages found". That exit was
+# being reported below as a high or critical advisory, which is a scan claiming
+# a finding it never made.
 if ! (cd apps/api && composer audit \
+        --locked \
         --no-interaction \
         --abandoned=report \
         --ignore-severity=low \
         --ignore-severity=medium); then
-    printf '  a high or critical advisory affects an API dependency\n' >&2
+    printf '  the API dependency audit reported a high or critical advisory, or could not run\n' >&2
     failures=$((failures + 1))
 fi
 

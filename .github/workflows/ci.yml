@@ -36,6 +36,22 @@ jobs:
           --health-timeout 5s
           --health-retries 12
 
+      # The click queue is a Redis list, not a cache entry, so forcing
+      # CACHE_STORE=array in the test bootstrap does not cover it. Without this
+      # service those tests skip and the health endpoint answers 500 for a
+      # dependency it cannot reach. No password: .env.example already points at
+      # 127.0.0.1:6379 with REDIS_PASSWORD=null, and a service container cannot
+      # be given `--requirepass` without overriding its command.
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping | grep -q PONG"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+
     steps:
       - uses: actions/checkout@v5
 
@@ -282,6 +298,22 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: apps/web
+
+      # The dev override bind-mounts the host tree over /app, which replaces the
+      # image's vendor directory with whatever the checkout has — and a fresh
+      # runner has none. The schema container then dies on a missing
+      # vendor/autoload.php before a single migration runs.
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, intl, pcntl, pdo_pgsql, redis, sockets, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Install API dependencies for the mounted tree
+        working-directory: apps/api
+        run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Install the browser
         run: pnpm exec playwright install --with-deps chromium

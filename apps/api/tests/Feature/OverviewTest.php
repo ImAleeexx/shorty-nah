@@ -61,6 +61,26 @@ beforeEach(function (): void {
     overviewEvents()->statement('TRUNCATE TABLE IF EXISTS '.ClickWriter::TABLE);
     overviewEvents()->statement('TRUNCATE TABLE IF EXISTS click_hourly');
     overviewEvents()->statement('TRUNCATE TABLE IF EXISTS click_by_country');
+
+    // Waited for, not assumed. A truncation is not immediately visible to the
+    // next read, and a baseline taken too early makes every delta below
+    // overshoot by whatever was still on its way out — which is how this
+    // reported 63 where 40 was seeded.
+    $emptied = false;
+
+    for ($attempt = 0; $attempt < 50; $attempt++) {
+        $rows = overviewEvents()->select('SELECT count() AS total FROM click_hourly');
+
+        if ((int) ($rows[0]['total'] ?? 0) === 0) {
+            $emptied = true;
+
+            break;
+        }
+
+        usleep(100_000);
+    }
+
+    expect($emptied)->toBeTrue('the event store did not settle after truncation');
 });
 
 /**

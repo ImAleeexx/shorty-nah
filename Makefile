@@ -140,6 +140,10 @@ lint-api: lint-syntax ## Check PHP syntax and formatting
 lint-web: ## Lint the web app and its stylesheets
 	$(WEB) pnpm lint
 	$(WEB) pnpm lint:css
+	# CI checks formatting and the local gate did not, so a run could be green
+	# here and fail there on nothing but whitespace. A gate that does not match
+	# the one it stands in for is not a gate.
+	$(WEB) pnpm format:check
 
 format: ## Apply PHP and web formatting
 	$(API_RUN) ./vendor/bin/pint
