@@ -8,12 +8,18 @@ use App\Clicks\ClickEnvelope;
 use App\Clicks\ClickQueue;
 use App\Clicks\ClickToken;
 use App\Clicks\GeoResolver;
+use App\Clicks\GeoResult;
 use App\Clicks\InterstitialPresenter;
+use App\Clicks\UserAgentParser;
 use App\Clicks\VisitorHash;
 use App\Enums\RedirectMode;
+use App\Enums\RuleKind;
 use App\Links\ClickCounter;
 use App\Links\RedirectResolver;
 use App\Links\ResolvedLink;
+use App\Links\RoutingContext;
+use App\Links\RuleEvaluator;
+use App\Settings\SettingsStore;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -37,6 +43,9 @@ final class RedirectController
         private readonly ClickQueue $clicks,
         private readonly GeoResolver $geo,
         private readonly VisitorHash $visitors,
+        private readonly RuleEvaluator $rules,
+        private readonly UserAgentParser $userAgents,
+        private readonly SettingsStore $settings,
     ) {}
 
     private const PASSWORD_MAX_ATTEMPTS = 8;
@@ -112,6 +121,15 @@ final class RedirectController
     {
         $speculative = $this->isSpeculative($request);
 
+        // Resolved once and carried, not resolved again when the click is
+        // recorded: two lookups per redirect for one address would be the
+        // obvious way to make this path cost twice what it needs to.
+        $geo = $this->geo->lookup($request->ip());
+
+        $destination = $link->rules === []
+            ? $link->destination
+            : $this->rules->destinationFor($link->rules, $this->context($request, $link, $geo), $link->destination);
+
         if (! $speculative) {
             // Counted before responding so a limit cannot be exceeded by a burst
             // that all reads the pre-increment value.
@@ -119,16 +137,96 @@ final class RedirectController
         }
 
         $response = $link->mode->rendersPage()
-            ? $this->interstitial($link, $speculative)
-            : $this->direct($link);
+            ? $this->interstitial($link, $destination, $speculative, $request, $geo)
+            : $this->direct($link, $destination);
 
         // Direct redirects record here; the modes that render a page record when
         // their click token is issued, so the beacon has something to attach to.
         if (! $speculative && ! $link->mode->usesBeacon()) {
-            $this->record($request, $link, (string) Str::ulid());
+            $this->record($request, $link, (string) Str::ulid(), $geo);
         }
 
         return $response;
+    }
+
+    /**
+     * Everything the link's rules actually need, and nothing else.
+     *
+     * Geography is resolved for every redirect because the envelope carries it,
+     * but parsing a user agent, splitting an Accept-Language header and reading
+     * the reporting timezone are not free and are not needed by a link that does
+     * not ask a question about them. A link with one country rule pays for one
+     * country rule.
+     */
+    private function context(Request $request, ResolvedLink $link, GeoResult $geo): RoutingContext
+    {
+        $kinds = array_map(static fn ($rule) => $rule->kind, $link->rules);
+
+        $device = '';
+
+        if (in_array(RuleKind::Device, $kinds, true)) {
+            $device = $this->userAgents->parse($request->userAgent())->deviceType;
+        }
+
+        $languages = in_array(RuleKind::Language, $kinds, true)
+            ? $this->languages($request->headers->get('accept-language'))
+            : [];
+
+        $minutes = 0;
+
+        if (in_array(RuleKind::TimeWindow, $kinds, true)) {
+            $timezone = $this->settings->string('analytics.timezone') ?? 'UTC';
+            $now = now()->setTimezone($timezone);
+            $minutes = $now->hour * 60 + $now->minute;
+        }
+
+        return new RoutingContext(
+            countryCode: $geo->countryCode,
+            deviceType: $device,
+            languages: $languages,
+            minutesSinceMidnight: $minutes,
+        );
+    }
+
+    /**
+     * The accepted languages, best first.
+     *
+     * Sorted by quality rather than taken in written order: a header of
+     * `en;q=0.5,es` prefers Spanish, and matching on the first written entry
+     * would send that visitor to the English destination.
+     *
+     * @return list<string>
+     */
+    private function languages(?string $header): array
+    {
+        if (! is_string($header) || trim($header) === '') {
+            return [];
+        }
+
+        $weighted = [];
+
+        foreach (explode(',', $header) as $index => $entry) {
+            $parts = explode(';', trim($entry));
+            $tag = trim($parts[0]);
+
+            if ($tag === '' || $tag === '*') {
+                continue;
+            }
+
+            $quality = 1.0;
+
+            if (isset($parts[1]) && preg_match('/q=([0-9.]+)/', $parts[1], $matches) === 1) {
+                $quality = (float) $matches[1];
+            }
+
+            // The index keeps the written order as a tiebreak, so equal-quality
+            // tags stay in the order the client sent them.
+            $weighted[] = ['tag' => $tag, 'q' => $quality, 'i' => $index];
+        }
+
+        usort($weighted, static fn (array $a, array $b): int => $b['q'] <=> $a['q'] ?: $a['i'] <=> $b['i']);
+
+        return array_map(static fn (array $entry): string => $entry['tag'], $weighted);
     }
 
     /**
@@ -188,10 +286,8 @@ final class RedirectController
      * answered. The lookup is a memory-mapped read of a local file: no socket,
      * no query.
      */
-    private function record(Request $request, ResolvedLink $link, string $clickId): void
+    private function record(Request $request, ResolvedLink $link, string $clickId, GeoResult $geo): void
     {
-        $address = $request->ip();
-
         $this->clicks->push(new ClickEnvelope(
             clickId: $clickId,
             linkId: $link->id,
@@ -200,22 +296,27 @@ final class RedirectController
             userAgent: $request->userAgent(),
             referrer: $request->headers->get('referer'),
             redirectMode: $link->mode->value,
-            geo: $this->geo->lookup($address),
-            visitorHash: $this->visitors->for($address, $request->userAgent()),
+            geo: $geo,
+            visitorHash: $this->visitors->for($request->ip(), $request->userAgent()),
         ));
     }
 
-    private function direct(ResolvedLink $link): RedirectResponse
+    private function direct(ResolvedLink $link, string $destination): RedirectResponse
     {
-        $response = new RedirectResponse($link->destination, 302);
+        $response = new RedirectResponse($destination, 302);
 
         // No body worth caching and nothing to track: the whole point of this
         // mode is that it is a plain redirect.
         return $this->withNoStore($response, $link);
     }
 
-    private function interstitial(ResolvedLink $link, bool $speculative = false): Response
-    {
+    private function interstitial(
+        ResolvedLink $link,
+        string $destination,
+        bool $speculative,
+        Request $request,
+        GeoResult $geo,
+    ): Response {
         $issued = $this->tokens->issue($link->id);
 
         // A fresh nonce per response is what lets the policy below forbid inline
@@ -229,7 +330,7 @@ final class RedirectController
             : 'redirect.interstitial';
 
         $response = new Response(view($view, [
-            'destination' => $link->destination,
+            'destination' => $destination,
             'branding' => $this->interstitial->present(),
             'nonce' => $nonce,
             'token' => $issued['token'],
@@ -241,7 +342,7 @@ final class RedirectController
         // Recorded with the token's own click identifier so the beacon's signals
         // land on this click rather than a different one.
         if (! $speculative) {
-            $this->record(request(), $link, $issued['click_id']);
+            $this->record($request, $link, $issued['click_id'], $geo);
         }
 
         return $this->withNoStore($response, $link);

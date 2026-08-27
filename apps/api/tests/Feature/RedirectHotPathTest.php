@@ -154,11 +154,22 @@ it('resolves a cold slug once when several requests arrive together', function (
     // The test client is sequential, so this asserts the property that matters:
     // only the first resolution reaches the database, and holding the lock does
     // not deadlock the callers that follow.
-    for ($i = 0; $i < 10; $i++) {
+    //
+    // Counted as "the cold path, then nothing" rather than as a literal number.
+    // The cold path issues two statements now — the link, then its routing rules,
+    // which are not joined because a link with five rules would multiply the row
+    // and every column with it — and pinning the number here would mean this test
+    // fails for a change that is none of its business.
+    expect($resolver->resolve($domain->host, 'popular'))->not->toBeNull();
+
+    $cold = count(DB::getQueryLog());
+
+    for ($i = 0; $i < 9; $i++) {
         expect($resolver->resolve($domain->host, 'popular'))->not->toBeNull();
     }
 
-    expect(DB::getQueryLog())->toHaveCount(1);
+    expect($cold)->toBeGreaterThan(0)
+        ->and(DB::getQueryLog())->toHaveCount($cold);
 });
 
 it('releases the lock so a later miss can still resolve', function (): void {

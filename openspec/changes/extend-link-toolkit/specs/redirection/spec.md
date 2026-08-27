@@ -58,6 +58,18 @@ offer matching on referrer, cookie, or query parameter.
 - **WHEN** a country rule is evaluated on an instance with no geographic databases present
 - **THEN** the rule does not match and the visitor reaches the link's own destination
 
+### Requirement: Rule changes are recorded in the audit log
+The system SHALL record a change to a link's routing rules in the audit log, naming the acting account
+and the link.
+
+#### Scenario: Rules are changed
+- **WHEN** an operator writes a link's rules
+- **THEN** an audit entry records who did it and against which link
+
+#### Scenario: Why this is audited at all
+- **WHEN** a link's rules send traffic somewhere other than its own destination
+- **THEN** the link row itself is unchanged, so the audit log is the only record that it was repointed
+
 ### Requirement: Rules are evaluated without a database query
 The system SHALL carry a link's rules in the same cache entry that carries the link, and SHALL evaluate
 them without querying the database.

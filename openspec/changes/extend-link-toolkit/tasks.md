@@ -21,18 +21,18 @@ path, and everything in phase 3 depends on it. A task's verification method is p
 
 ## 3. Rule-based routing
 
-- [ ] 3.1 Add the `link_rules` table with an explicit position, a condition kind, its value, and a destination, and verify position uniqueness per link
-- [ ] 3.2 Validate a rule destination through the same path a link destination uses, and verify a loopback, private, link-local and metadata destination are each refused
-- [ ] 3.3 Carry rules in `ResolvedLink` and its cache payload, and verify a rule-carrying link resolves from cache with no database query
-- [ ] 3.4 Invalidate the link cache from rule model events, and verify adding, editing, reordering and removing a rule each take effect on the next request
-- [ ] 3.5 Implement country matching against the geography resolved in phase 2, and verify a matching country routes to the rule and a non-matching one falls through
-- [ ] 3.6 Implement device matching from the user agent, and verify mobile, tablet and desktop each route as configured
-- [ ] 3.7 Implement language matching from `Accept-Language`, and verify a weighted list matches on its preferred entry and an absent header matches nothing
-- [ ] 3.8 Implement time-window matching in the instance reporting timezone, and verify a request inside the window matches and one outside does not, including a window crossing midnight
-- [ ] 3.9 Evaluate rules in position order with first-match-wins, and verify two matching rules resolve to the earlier one
-- [ ] 3.10 Verify a country rule on an instance with no geographic databases does not match, and the visitor reaches the link's own destination
-- [ ] 3.11 Cap rules per link, and verify the refusal names the cap
-- [ ] 3.12 Verify a link with no rules behaves exactly as before, by asserting the direct path's response is unchanged
+- [x] 3.1 Add the `link_rules` table with an explicit position, a condition kind, its value, and a destination, and verify position uniqueness per link Done.
+- [x] 3.2 Validate a rule destination through the same path a link destination uses, and verify a loopback, private, link-local and metadata destination are each refused Done, through the same `DestinationValidator` a link uses, so a rule cannot become the way around a refusal that applies everywhere else.
+- [x] 3.3 Carry rules in `ResolvedLink` and its cache payload, and verify a rule-carrying link resolves from cache with no database query Done. The cold path loads rules in a second statement rather than a join: a link with five rules would multiply the link row and every column with it, and the cold path runs once an hour per slug.
+- [x] 3.4 Invalidate the link cache from rule model events, and verify adding, editing, reordering and removing a rule each take effect on the next request Done via `LinkRuleObserver`. The link's own observer cannot see a rule change — nothing on the link row differs — so without this a link keeps routing by yesterday's rules for up to an hour.
+- [x] 3.5 Implement country matching against the geography resolved in phase 2, and verify a matching country routes to the rule and a non-matching one falls through Done, including several countries in one rule.
+- [x] 3.6 Implement device matching from the user agent, and verify mobile, tablet and desktop each route as configured Done, and the vocabulary is the operator's rather than the parser's: the library says `smartphone`, a rule says `mobile`. Making an operator learn the library's finer vocabulary would be a rule set that fails silently when someone writes the obvious word.
+- [x] 3.7 Implement language matching from `Accept-Language`, and verify a weighted list matches on its preferred entry and an absent header matches nothing Done, sorted by quality rather than written order — a header of `en;q=0.5,es` prefers Spanish, and matching the first written tag would send that visitor to the wrong place.
+- [x] 3.8 Implement time-window matching in the instance reporting timezone, and verify a request inside the window matches and one outside does not, including a window crossing midnight Done, including a window crossing midnight and a malformed window matching nothing rather than everything.
+- [x] 3.9 Evaluate rules in position order with first-match-wins, and verify two matching rules resolve to the earlier one Done.
+- [x] 3.10 Verify a country rule on an instance with no geographic databases does not match, and the visitor reaches the link's own destination Done: a condition nobody can evaluate must not silently capture traffic.
+- [x] 3.11 Cap rules per link, and verify the refusal names the cap Done at 20.
+- [x] 3.12 Verify a link with no rules behaves exactly as before, by asserting the direct path's response is unchanged Done. The assertion is on the Cache-Control directives rather than the header string, because Symfony normalises and reorders it and a literal comparison tests the framework's formatting.
 
 ## 4. QR codes
 

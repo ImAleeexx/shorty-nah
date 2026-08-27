@@ -28,6 +28,14 @@ final class ResolvedLink
         public readonly ?int $maxClicks,
         public readonly int $persistedClicks,
         public readonly ?string $referrerPolicy,
+        /**
+         * Ordered, first-match-wins. Carried here rather than loaded so that a
+         * rule-carrying link still resolves without a query — the same reason
+         * expiry and the click limit live on this object.
+         *
+         * @var list<RoutingRule>
+         */
+        public readonly array $rules = [],
     ) {}
 
     /**
@@ -47,6 +55,7 @@ final class ResolvedLink
             'max_clicks' => $this->maxClicks,
             'persisted_clicks' => $this->persistedClicks,
             'referrer_policy' => $this->referrerPolicy,
+            'rules' => array_map(static fn (RoutingRule $rule): array => $rule->toArray(), $this->rules),
         ];
     }
 
@@ -67,7 +76,34 @@ final class ResolvedLink
             maxClicks: is_int($payload['max_clicks'] ?? null) ? $payload['max_clicks'] : null,
             persistedClicks: is_int($payload['persisted_clicks'] ?? null) ? $payload['persisted_clicks'] : 0,
             referrerPolicy: is_string($payload['referrer_policy'] ?? null) ? $payload['referrer_policy'] : null,
+            rules: self::rulesFrom($payload['rules'] ?? null),
         );
+    }
+
+    /**
+     * @return list<RoutingRule>
+     */
+    private static function rulesFrom(mixed $payload): array
+    {
+        if (! is_array($payload)) {
+            return [];
+        }
+
+        $rules = [];
+
+        foreach ($payload as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $rule = RoutingRule::fromArray($entry);
+
+            if ($rule instanceof RoutingRule) {
+                $rules[] = $rule;
+            }
+        }
+
+        return $rules;
     }
 
     public function isExpired(): bool

@@ -14,6 +14,7 @@ use App\Http\Controllers\ClickBeaconController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LinkController;
+use App\Http\Controllers\LinkRuleController;
 use App\Http\Controllers\PublicConfigurationController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SetupController;
@@ -113,6 +114,12 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/links', [LinkController::class, 'store'])->name('links.store');
             Route::patch('/links/{link}', [LinkController::class, 'update'])->name('links.update');
             Route::delete('/links/{link}', [LinkController::class, 'destroy'])->name('links.destroy');
+
+            // Read and written as an ordered set: position is the semantics, and
+            // reordering one rule at a time would pass through states the unique
+            // position constraint refuses.
+            Route::get('/links/{link}/rules', [LinkRuleController::class, 'index'])->name('links.rules.index');
+            Route::put('/links/{link}/rules', [LinkRuleController::class, 'replace'])->name('links.rules.replace');
 
             Route::get('/links/{link}/report', [AnalyticsController::class, 'report'])->name('links.report');
             Route::get('/links/{link}/events', [AnalyticsController::class, 'events'])->name('links.events');

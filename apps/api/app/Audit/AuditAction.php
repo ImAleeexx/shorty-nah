@@ -39,6 +39,11 @@ enum AuditAction: string
 
     case LinkPasswordChanged = 'link.password.changed';
 
+    // A routing rule decides where traffic goes without changing the link's own
+    // destination, so a link can be repointed without its destination column ever
+    // differing. That is precisely what an audit log is for.
+    case LinkRulesChanged = 'link.rules.changed';
+
     case AnalyticsExported = 'analytics.exported';
 
     case InstallationCompleted = 'instance.installed';
