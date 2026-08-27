@@ -94,6 +94,8 @@ Route::prefix('v1')->group(function (): void {
         Route::middleware(RequireRecentAuthentication::class)->group(function (): void {
             Route::post('/auth/two-factor', [TwoFactorController::class, 'store'])
                 ->name('auth.two-factor.store');
+            Route::get('/auth/two-factor/{credential}/qr', [TwoFactorController::class, 'qr'])
+                ->name('auth.two-factor.qr');
             Route::post('/auth/two-factor/{credential}/confirm', [TwoFactorController::class, 'confirm'])
                 ->name('auth.two-factor.confirm');
             Route::delete('/auth/two-factor/{credential}', [TwoFactorController::class, 'destroy'])

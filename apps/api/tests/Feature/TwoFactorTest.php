@@ -288,3 +288,62 @@ it('hides another account enrolment behind a 404', function (): void {
         ->postJson("/api/v1/auth/two-factor/{$enrolment['credential']->public_id}/confirm", ['code' => '123456'])
         ->assertStatus(404);
 });
+
+// --- the enrolment QR ---
+
+it('renders the pending enrolment as a scannable code', function (): void {
+    $user = User::factory()->freshlyAuthenticated()->create();
+
+    $begun = $this->actingAs($user)
+        ->postJson('/api/v1/auth/two-factor', ['name' => 'Phone'])
+        ->assertCreated()
+        ->json();
+
+    $response = $this->actingAs($user)
+        ->get('/api/v1/auth/two-factor/'.$begun['id'].'/qr')
+        ->assertOk();
+
+    $body = (string) $response->getContent();
+
+    expect($response->headers->get('Content-Type'))->toContain('image/svg+xml')
+        ->and($body)->toStartWith('<svg')
+        // Carries the shared secret, so it must not be stored anywhere between
+        // here and the screen.
+        ->and($response->headers->get('Cache-Control'))->toContain('no-store');
+});
+
+it('stops serving the code once the factor is confirmed', function (): void {
+    $user = User::factory()->freshlyAuthenticated()->create();
+
+    $begun = $this->actingAs($user)
+        ->postJson('/api/v1/auth/two-factor', ['name' => 'Phone'])
+        ->assertCreated()
+        ->json();
+
+    $totp = TOTP::createFromSecret($begun['secret']);
+    $totp->setPeriod(30);
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/auth/two-factor/'.$begun['id'].'/confirm', ['code' => $totp->now()])
+        ->assertOk();
+
+    // The code is spent. Re-serving it would turn a settings page into a
+    // permanent source of the account's TOTP secret.
+    $this->actingAs($user)
+        ->get('/api/v1/auth/two-factor/'.$begun['id'].'/qr')
+        ->assertStatus(404);
+});
+
+it('answers as though the enrolment does not exist for another account', function (): void {
+    $owner = User::factory()->freshlyAuthenticated()->create();
+    $stranger = User::factory()->freshlyAuthenticated()->create();
+
+    $begun = $this->actingAs($owner)
+        ->postJson('/api/v1/auth/two-factor', ['name' => 'Phone'])
+        ->assertCreated()
+        ->json();
+
+    $this->actingAs($stranger)
+        ->get('/api/v1/auth/two-factor/'.$begun['id'].'/qr')
+        ->assertStatus(404);
+});

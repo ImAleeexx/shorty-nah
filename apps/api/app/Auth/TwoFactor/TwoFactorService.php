@@ -84,6 +84,32 @@ final class TwoFactorService
     }
 
     /**
+     * The provisioning URI for a credential already begun.
+     *
+     * Rebuilt from the stored secret rather than remembered, so nothing has to
+     * hold an `otpauth://` string — which carries the secret — anywhere between
+     * the two requests.
+     */
+    public function provisioningUri(TwoFactorCredential $credential, User $user, string $issuer): string
+    {
+        $secret = $credential->secret;
+
+        // A credential without a secret is not a TOTP enrolment at all, and
+        // handing an empty string to the generator would produce a code nobody
+        // can match rather than an error anyone can read.
+        if (! is_string($secret) || $secret === '') {
+            throw new TwoFactorException('That enrolment has no secret.');
+        }
+
+        $totp = TOTP::createFromSecret($secret);
+        $totp->setPeriod(self::PERIOD);
+        $totp->setLabel($user->email !== '' ? $user->email : 'account');
+        $totp->setIssuer($issuer !== '' ? $issuer : 'Shorty-Nah');
+
+        return $totp->getProvisioningUri();
+    }
+
+    /**
      * Confirm an enrolment. Returns the recovery codes if this is the account's
      * first factor, and null otherwise — they are issued once, not per factor.
      *

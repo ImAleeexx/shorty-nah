@@ -13,6 +13,16 @@ const APP = 'http://localhost:8080';
 
 const OPERATOR = { email: 'e2e@example.test', password: 'a quiet lantern drifts' };
 
+/** Chrome's virtual authenticator: the real ceremony, without hardware. */
+const AUTHENTICATOR = {
+  protocol: 'ctap2' as const,
+  transport: 'internal' as const,
+  hasResidentKey: true,
+  hasUserVerification: true,
+  isUserVerified: true,
+  automaticPresenceSimulation: true,
+};
+
 /** RFC 4648 base32, which is how an authenticator secret is written. */
 function base32Decode(input: string): Buffer {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -111,14 +121,28 @@ async function setRequirement(page: import('@playwright/test').Page, required: b
   expect(response.ok()).toBe(true);
 }
 
+// Carried between the serial tests: the enrolment secret is shown once, and
+// every step after it needs a code generated from it. Module scope, because the
+// sign-in helper below is defined outside the describe that uses it.
+let secret = '';
+
+/** Signs in and, once a factor exists, satisfies the challenge it presents. */
+async function signInFully(page: import('@playwright/test').Page) {
+  await signIn(page);
+
+  const challenge = page.getByTestId('two-factor-challenge');
+
+  if (await challenge.isVisible().catch(() => false)) {
+    await page.getByTestId('two-factor-code').fill(await freshCode(secret));
+    await page.getByTestId('submit-two-factor').click();
+    await page.waitForURL((url) => !url.pathname.startsWith('/sign-in'));
+  }
+}
+
 test.describe('@security instance-wide second factor', () => {
   // Serial and generously timed: a step has to roll over between uses, which is
   // up to thirty seconds of real waiting per code.
   test.describe.configure({ mode: 'serial', timeout: 120_000 });
-
-  // Carried between the serial tests: the enrolment secret is shown once, and
-  // every step after it needs a code generated from it.
-  let secret = '';
 
   test('sends a confined account to enrolment instead of a dead end', async ({ page }) => {
     await signIn(page);
@@ -138,6 +162,41 @@ test.describe('@security instance-wide second factor', () => {
     // an empty page.
     await page.goto(`${APP}/links`);
     await expect(page).toHaveURL(`${APP}/security`);
+  });
+
+  test('shows a scannable code for the authenticator enrolment', async ({ page }) => {
+    await signIn(page);
+    await page.goto(`${APP}/security`);
+
+    await page.getByTestId('begin-enrolment').click();
+
+    const qr = page.getByTestId('enrolment-qr');
+
+    await expect(qr).toBeVisible();
+
+    // Polled, not read once: toBeVisible passes as soon as the element has a
+    // box, which is before the image data has arrived. Reading naturalWidth at
+    // that moment measures an image that has not loaded yet rather than one that
+    // is broken.
+    await expect
+      .poll(() =>
+        qr.evaluate((node) => {
+          const image = node as HTMLImageElement;
+
+          return image.complete && image.naturalWidth > 0;
+        }),
+      )
+      .toBe(true);
+
+    // The image carries the shared secret, so it must not be stored anywhere
+    // between the API and the screen.
+    const served = await page.request.get(`${APP}${await qr.getAttribute('src')}`);
+
+    expect(served.status()).toBe(200);
+    expect(served.headers()['cache-control']).toContain('no-store');
+
+    // The secret is offered as text as well, for a machine with no camera.
+    await expect(page.getByTestId('enrolment-secret')).toBeVisible();
   });
 
   test('enrols an authenticator and issues recovery codes once', async ({ page }) => {
@@ -165,6 +224,26 @@ test.describe('@security instance-wide second factor', () => {
     // And the codes are not shown a second time.
     await page.goto(`${APP}/security`);
     await expect(page.getByTestId('recovery-codes')).toHaveCount(0);
+  });
+
+  test('registers a passkey through the interface', async ({ page }) => {
+    const client = await page.context().newCDPSession(page);
+
+    await client.send('WebAuthn.enable');
+    await client.send('WebAuthn.addVirtualAuthenticator', { options: AUTHENTICATOR });
+
+    await signInFully(page);
+    await page.goto(`${APP}/security`);
+
+    const before = await page.getByTestId('factor-row').count();
+
+    // The ceremony is signature verification against a real credential, so this
+    // drives Chrome's virtual authenticator rather than faking the payload —
+    // and it goes through the button, which is the part that did not exist.
+    await page.getByTestId('add-passkey').click();
+
+    await expect(page.getByTestId('factor-row')).toHaveCount(before + 1);
+    await expect(page.getByTestId('factor-row').filter({ hasText: 'Passkey' })).toBeVisible();
   });
 
   test('challenges the enrolled factor on the next sign-in', async ({ page, context }) => {
@@ -195,9 +274,18 @@ test.describe('@security instance-wide second factor', () => {
 
     await page.goto(`${APP}/security`);
 
-    const factor = page.getByTestId('factor-row').first();
+    // Every factor, not just the first: this spec adds an authenticator and a
+    // passkey, and leaving either behind means the next run's sign-in is
+    // challenged before it can do anything.
+    for (let remaining = await page.getByTestId('factor-row').count(); remaining > 0; remaining--) {
+      await page
+        .getByTestId('factor-row')
+        .first()
+        .getByRole('button', { name: /Remove/ })
+        .click();
 
-    await factor.getByRole('button', { name: /Remove/ }).click();
+      await expect(page.getByTestId('factor-row')).toHaveCount(remaining - 1);
+    }
 
     await expect(page.getByTestId('factor-row')).toHaveCount(0);
   });
