@@ -34,11 +34,12 @@ export default async function SettingsPage() {
   }
 
   const [settings, domains] = await Promise.all([
-    apiGet<{ settings: SettingsValues }>('/api/v1/settings'),
+    apiGet<{ settings: SettingsValues; geo: { databases_present: boolean } }>('/api/v1/settings'),
     apiGet<{ domains: DomainRecord[] }>('/api/v1/domains'),
   ]);
 
   const values = settings.ok ? settings.data.settings : {};
+  const geoActive = settings.ok && settings.data.geo.databases_present;
   const branding = sanitiseBranding(configuration);
 
   return (
@@ -89,7 +90,9 @@ export default async function SettingsPage() {
                 {
                   key: 'geo.maxmind_account_id',
                   label: 'MaxMind account ID',
-                  hint: 'Without a licence, geography is absent rather than wrong.',
+                  hint: geoActive
+                    ? 'Geographic databases are present and resolving.'
+                    : 'No geographic databases. The updater reads MAXMIND_ACCOUNT_ID and MAXMIND_LICENSE_KEY from the environment, not from here — it runs before this instance exists.',
                   kind: 'text',
                 },
                 { key: 'geo.maxmind_license_key', label: 'MaxMind licence key', kind: 'password' },
