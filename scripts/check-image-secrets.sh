@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."
 
 IMAGES=("${@:-}")
 if [[ -z "${IMAGES[0]:-}" ]]; then
-    IMAGES=("shortynah-api:dev" "shortynah-web:dev")
+    IMAGES=("shortynah-api:dev" "shortynah-web:dev" "shortynah-edge:dev")
 fi
 
 set -a

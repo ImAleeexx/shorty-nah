@@ -82,7 +82,12 @@ services:
       - ${SETUP_TOKEN_DIR:-./run}:/var/lib/shortynah/setup
 
   edge:
-    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    # Built rather than pulled: the stock image carries no DNS provider, and
+    # DNS-01 is the only ACME challenge a host behind a router can answer.
+    build:
+      context: .
+      dockerfile: docker/caddy/Dockerfile
+    image: shortynah-edge:${IMAGE_TAG:-dev}
     restart: unless-stopped
     depends_on:
       api:
@@ -92,6 +97,10 @@ services:
     environment:
       APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN is required}
       CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:?CADDY_ACME_EMAIL is required}
+      # Empty unless a token is configured, in which case it becomes the whole
+      # acme_dns directive. Keeps HTTP-01 the default for instances that can
+      # answer it.
+      CADDY_ACME_DNS: ${CLOUDFLARE_API_TOKEN:+acme_dns cloudflare ${CLOUDFLARE_API_TOKEN}}
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
