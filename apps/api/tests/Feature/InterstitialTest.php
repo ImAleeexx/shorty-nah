@@ -278,3 +278,65 @@ it('counts exactly one click for one interstitial view', function (): void {
 
     expect(app(ClickCounter::class)->current($link->id))->toBe(1);
 });
+
+// --- The invisible mode: the interstitial's measurement without its page ---
+
+function invisible(string $slug, string $destination = 'https://example.org/target'): TestResponse
+{
+    $domain = Domain::query()->where('host', 'go.example.test')->first() ?? interstitialHost();
+
+    Link::factory()->forDomain($domain)->withSlug($slug)->create([
+        'destination' => $destination,
+        'redirect_mode' => 'invisible',
+    ]);
+
+    return hold($domain->host, $slug);
+}
+
+it('reports the same signals as the hold page, with none of its furniture', function (): void {
+    $body = (string) invisible('invisib1')->assertOk()->getContent();
+
+    expect($body)->toContain('navigator.sendBeacon')
+        ->toContain('window.location.replace')
+        ->toContain('viewport_width')
+        ->toContain('timezone')
+        // Nothing a visitor would recognise as somebody else's page.
+        ->not->toContain('Taking you there')
+        ->not->toContain('progress');
+});
+
+it('navigates without waiting for the configured hold', function (): void {
+    app(SettingsStore::class)->set('redirect.interstitial_delay_ms', 5000);
+
+    $body = (string) invisible('invisib2')->assertOk()->getContent();
+
+    // No timer at all: the delay belongs to the mode that shows something.
+    expect($body)->not->toContain('setTimeout');
+});
+
+it('still reaches the destination with scripting unavailable', function (): void {
+    invisible('invisib3')
+        ->assertOk()
+        ->assertSee('http-equiv="refresh"', escape: false)
+        ->assertSee('https://example.org/target', escape: false);
+});
+
+it('mints a token the beacon can attach its signals to', function (): void {
+    $body = (string) invisible('invisib4')->assertOk()->getContent();
+
+    expect($body)->toMatch('/var token = "[^"]+"/');
+});
+
+it('is selectable as the instance default', function (): void {
+    app(SettingsStore::class)->set('redirect.default_mode', 'invisible');
+
+    $domain = interstitialHost('go2.example.test');
+    Link::factory()->forDomain($domain)->withSlug('invisib5')->create([
+        'destination' => 'https://example.org/target',
+        'redirect_mode' => null,
+    ]);
+
+    hold($domain->host, 'invisib5')
+        ->assertOk()
+        ->assertSee('navigator.sendBeacon', escape: false);
+});

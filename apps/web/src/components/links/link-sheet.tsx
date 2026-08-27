@@ -168,7 +168,7 @@ export function LinkSheet({
 
         <Field
           label="Redirect mode"
-          hint="Direct is the fast path. Interstitial holds on a branded page to collect client-side signals."
+          hint="Direct is the fast path. Interstitial holds on a branded page. Invisible collects the same signals with no page a visitor would notice."
           error={failure?.errors.redirect_mode?.[0]}
         >
           {({ id, describedBy }) => (
@@ -181,6 +181,7 @@ export function LinkSheet({
               <option value="">Instance default</option>
               <option value="direct">Direct</option>
               <option value="interstitial">Interstitial</option>
+              <option value="invisible">Invisible</option>
             </Select>
           )}
         </Field>

@@ -48,6 +48,7 @@ final class BrandingController
             'accent' => ['sometimes', 'string', 'max:64'],
             'radius' => ['sometimes', 'integer'],
             'typeface' => ['sometimes', 'string', 'max:64'],
+            'footer_text' => ['sometimes', 'nullable', 'string', 'max:200'],
         ]);
 
         $errors = [];
@@ -80,7 +81,13 @@ final class BrandingController
 
         $changes = [];
 
-        foreach (['name' => 'instance.name', 'accent' => 'branding.accent', 'radius' => 'branding.radius', 'typeface' => 'branding.typeface'] as $field => $key) {
+        foreach ([
+            'name' => 'instance.name',
+            'accent' => 'branding.accent',
+            'radius' => 'branding.radius',
+            'typeface' => 'branding.typeface',
+            'footer_text' => 'branding.footer_text',
+        ] as $field => $key) {
             if (array_key_exists($field, $input)) {
                 /** @var string|int $value */
                 $value = $input[$field];
@@ -163,6 +170,7 @@ final class BrandingController
             'logo' => $settings->string('branding.logo_path'),
             'wordmark' => $settings->string('branding.wordmark_path'),
             'favicon' => $settings->string('branding.favicon_path'),
+            'footer_text' => $settings->string('branding.footer_text'),
         ];
     }
 }

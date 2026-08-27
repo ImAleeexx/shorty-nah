@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Warning } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/field';
-import { RADIUS_MAX, RADIUS_MIN } from '@/lib/branding';
+import { RADIUS_MAX, RADIUS_MIN, TYPEFACE_STACKS, typefaceStack } from '@/lib/branding';
 import { apiRequest, type ApiFailure } from '@/lib/client-api';
 import {
   assessContrast,
@@ -27,18 +27,28 @@ const SURFACES: { label: string; surface: Oklch; ink: Oklch }[] = [
   { label: 'Dark', surface: { l: 0.205, c: 0.003, h: 90 }, ink: { l: 0.955, c: 0.002, h: 90 } },
 ];
 
-const TYPEFACES = ['geist', 'inter-tight', 'satoshi'] as const;
+// Rendered from the shared map, not an invented list. The previous one offered
+// inter-tight and satoshi, which this instance does not carry and the API
+// refuses outright — selecting either produced a validation error.
+const TYPEFACES = Object.keys(TYPEFACE_STACKS);
+
+const TYPEFACE_LABELS: Record<string, string> = {
+  geist: 'Geist',
+  'geist-mono': 'Geist Mono',
+  'instrument-serif': 'Instrument Serif',
+};
 
 export function BrandingEditor({
   initial,
 }: {
-  initial: { name: string; accent: string; radius: number; typeface: string };
+  initial: { name: string; accent: string; radius: number; typeface: string; footer: string };
 }) {
   const router = useRouter();
   const [name, setName] = useState(initial.name);
   const [accent, setAccent] = useState(initial.accent);
   const [radius, setRadius] = useState(initial.radius);
   const [typeface, setTypeface] = useState(initial.typeface);
+  const [footer, setFooter] = useState(initial.footer);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<ApiFailure | null>(null);
 
@@ -63,7 +73,7 @@ export function BrandingEditor({
 
     const result = await apiRequest('/api/v1/branding', {
       method: 'PUT',
-      body: { name, accent, radius, typeface },
+      body: { name, accent, radius, typeface, footer_text: footer },
     });
 
     setBusy(false);
@@ -116,7 +126,13 @@ export function BrandingEditor({
           <div
             key={entry.label}
             className="border-border flex items-center justify-between gap-4 rounded-(--radius-token-sm) border px-3 py-2"
-            style={{ background: formatOklch(entry.surface), color: formatOklch(entry.ink) }}
+            style={{
+              background: formatOklch(entry.surface),
+              color: formatOklch(entry.ink),
+              // The chosen face, so the selector shows its own effect rather
+              // than only recording it.
+              fontFamily: typefaceStack(typeface),
+            }}
             data-mode={entry.label.toLowerCase()}
             data-passes={entry.verdict.passes ? 'true' : 'false'}
           >
@@ -190,10 +206,27 @@ export function BrandingEditor({
           >
             {TYPEFACES.map((face) => (
               <option key={face} value={face}>
-                {face}
+                {TYPEFACE_LABELS[face] ?? face}
               </option>
             ))}
           </Select>
+        )}
+      </Field>
+
+      <Field
+        label="Footer"
+        hint="Shown at the foot of every page. Leave it empty for no footer."
+        error={failure?.errors.footer_text?.[0]}
+      >
+        {({ id, describedBy }) => (
+          <Input
+            id={id}
+            aria-describedby={describedBy}
+            maxLength={200}
+            value={footer}
+            onChange={(event) => setFooter(event.target.value)}
+            data-testid="footer-input"
+          />
         )}
       </Field>
 

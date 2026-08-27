@@ -114,13 +114,13 @@ final class RedirectController
             $clicks->increment($link->id);
         }
 
-        $response = $link->mode === RedirectMode::Interstitial
+        $response = $link->mode->rendersPage()
             ? $this->interstitial($link, $speculative)
             : $this->direct($link);
 
-        // Direct redirects record here; the interstitial records when its own
-        // click token is issued, so the beacon has something to attach to.
-        if (! $speculative && $link->mode !== RedirectMode::Interstitial) {
+        // Direct redirects record here; the modes that render a page record when
+        // their click token is issued, so the beacon has something to attach to.
+        if (! $speculative && ! $link->mode->usesBeacon()) {
             $this->record($request, $link, (string) Str::ulid());
         }
 
@@ -208,7 +208,13 @@ final class RedirectController
         // script and style outright instead of allowing them everywhere.
         $nonce = base64_encode(random_bytes(16));
 
-        $response = new Response(view('redirect.interstitial', [
+        // The invisible mode renders a different document: same measurement, no
+        // hold and no branding, so the visitor perceives an ordinary redirect.
+        $view = $link->mode === RedirectMode::Invisible
+            ? 'redirect.invisible'
+            : 'redirect.interstitial';
+
+        $response = new Response(view($view, [
             'destination' => $link->destination,
             'branding' => $this->interstitial->present(),
             'nonce' => $nonce,

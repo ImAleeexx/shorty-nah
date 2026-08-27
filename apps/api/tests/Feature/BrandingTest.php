@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Branding\BrandingBounds;
 use App\Branding\ContrastCheck;
+use App\Enums\Role;
 use App\Models\User;
 use App\Settings\SettingsStore;
 use Illuminate\Http\UploadedFile;
@@ -260,4 +261,43 @@ it('accepts a palette image', function (): void {
         'kind' => 'logo',
         'asset' => new UploadedFile($path, 'palette.png', 'image/png', null, true),
     ])->assertCreated();
+});
+
+// --- The configurable footer ---
+
+it('exposes the footer text before anyone signs in', function (): void {
+    $this->getJson('/api/v1/config')
+        ->assertOk()
+        ->assertJsonPath('branding.footer', 'Made by ImAleex_ with ❤️');
+});
+
+it('lets an administrator change the footer text', function (): void {
+    $admin = User::factory()->freshlyAuthenticated()->create(['role' => Role::Admin]);
+
+    $this->actingAs($admin)
+        ->putJson('/api/v1/branding', ['footer_text' => 'Run by the operations team'])
+        ->assertOk();
+
+    $this->getJson('/api/v1/config')
+        ->assertOk()
+        ->assertJsonPath('branding.footer', 'Run by the operations team');
+});
+
+it('accepts an empty footer, which renders nothing at all', function (): void {
+    $admin = User::factory()->freshlyAuthenticated()->create(['role' => Role::Admin]);
+
+    $this->actingAs($admin)
+        ->putJson('/api/v1/branding', ['footer_text' => null])
+        ->assertOk();
+
+    expect(app(SettingsStore::class)->string('branding.footer_text'))->toBeNull();
+});
+
+it('refuses a footer longer than the field allows', function (): void {
+    $admin = User::factory()->freshlyAuthenticated()->create(['role' => Role::Admin]);
+
+    $this->actingAs($admin)
+        ->putJson('/api/v1/branding', ['footer_text' => str_repeat('a', 201)])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('footer_text');
 });

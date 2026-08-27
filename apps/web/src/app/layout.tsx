@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
+import { InstanceFooter } from '@/components/instance-footer';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { fetchPublicConfiguration } from '@/lib/api';
-import { sanitiseBranding } from '@/lib/branding';
+import { sanitiseBranding, typefaceStack } from '@/lib/branding';
 import { fontVariables } from '@/lib/fonts';
 
 import './globals.css';
@@ -33,11 +34,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       style={{
         ['--accent' as string]: branding.accent,
         ['--radius' as string]: `${branding.radius}px`,
+        // The chosen face has to reach the document, not just the settings
+        // table. Inlined with the rest so it is right on first paint.
+        ['--font-sans' as string]: typefaceStack(branding.typeface),
       }}
     >
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
           {children}
+          <InstanceFooter text={branding.footer} />
           <Toaster />
         </ThemeProvider>
       </body>

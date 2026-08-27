@@ -35,6 +35,7 @@ final class PublicConfigurationController
                 'logo' => $exposed['branding.logo_path'] ?? null,
                 'wordmark' => $exposed['branding.wordmark_path'] ?? null,
                 'favicon' => $exposed['branding.favicon_path'] ?? null,
+                'footer' => $exposed['branding.footer_text'] ?? null,
             ],
         ]);
     }

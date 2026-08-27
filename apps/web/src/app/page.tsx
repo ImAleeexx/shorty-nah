@@ -1,9 +1,13 @@
 import { redirect } from 'next/navigation';
 
 import { AppShell } from '@/components/app-shell';
-import { LinkIcon, Plus } from '@/components/icons';
+import { LinkIcon } from '@/components/icons';
 import { BentoCell, BentoGrid } from '@/components/ui/bento';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+
+import { NewLinkButton } from '@/components/links/new-link-button';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/cn';
 import { Card, CardBody, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Stat } from '@/components/ui/stat';
@@ -35,10 +39,7 @@ export default async function DashboardPage() {
           <p className="text-ink-muted mt-1 text-sm">Links, clicks and where they came from.</p>
         </div>
 
-        <Button intent="primary" size="md">
-          <Plus size={15} />
-          New link
-        </Button>
+        <NewLinkButton />
       </div>
 
       <BentoGrid data-testid="bento-grid">
@@ -72,10 +73,10 @@ export default async function DashboardPage() {
             <CardHeader
               title="Links"
               action={
-                <Button intent="ghost" size="sm">
+                <Link href="/links" className={cn(buttonVariants({ intent: 'ghost', size: 'sm' }))}>
                   <LinkIcon size={14} />
                   Manage
-                </Button>
+                </Link>
               }
             />
             <CardBody className="p-0">
@@ -83,10 +84,7 @@ export default async function DashboardPage() {
                 title="No links yet"
                 description="Create your first short link and its clicks will start appearing here."
                 action={
-                  <Button intent="accent" size="sm">
-                    <Plus size={14} />
-                    Create a link
-                  </Button>
+                  <NewLinkButton label="Create a link" intent="accent" size="sm" iconSize={14} />
                 }
               />
             </CardBody>
