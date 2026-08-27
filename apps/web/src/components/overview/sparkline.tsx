@@ -14,7 +14,7 @@ export function Sparkline({ days }: { days: { day: string; counted: number }[] }
 
   return (
     <div
-      className="flex h-16 items-end gap-px"
+      className="flex h-14 items-end gap-px"
       role="img"
       aria-label={`Counted clicks per day over the last ${days.length} days`}
       data-testid="overview-sparkline"

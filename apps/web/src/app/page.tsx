@@ -87,14 +87,21 @@ export default async function DashboardPage() {
       </div>
 
       <BentoGrid data-testid="bento-grid">
-        {/* Sized to their content rather than stretched to the tallest cell in
-            the row. A grid stretches by default, which was calm when a card was
-            a hairline rectangle and reads as unfinished now that it floats: two
-            thirds of an elevated card holding nothing looks like a card that
-            failed to load. */}
-        <BentoCell span="quarter" data-testid="bento-cell" className="self-start">
-          <Card>
-            <CardBody>
+        {/*
+         * Every cell in a row is the same height, and the stat content is
+         * centred inside it rather than pinned to the top.
+         *
+         * These were briefly sized to their own content, on the reasoning that
+         * an elevated card holding nothing looks unfinished. That traded one
+         * problem for a worse one: three cards at three different heights in a
+         * single row have no shared baseline, and a row without a baseline
+         * reads as broken rather than as airy. Matching the height and
+         * centring the figure fixes both — the card is full, because the
+         * number sits where the eye already is.
+         */}
+        <BentoCell span="quarter" data-testid="bento-cell">
+          <Card className="h-full">
+            <CardBody className="flex flex-col justify-center">
               <Stat
                 label="Links"
                 value={overview.links_total}
@@ -104,9 +111,9 @@ export default async function DashboardPage() {
           </Card>
         </BentoCell>
 
-        <BentoCell span="quarter" data-testid="bento-cell" className="self-start">
-          <Card>
-            <CardBody>
+        <BentoCell span="quarter" data-testid="bento-cell">
+          <Card className="h-full">
+            <CardBody className="flex flex-col justify-center">
               <Stat
                 label="Clicks"
                 value={overview.totals.counted}
@@ -193,9 +200,16 @@ export default async function DashboardPage() {
         <BentoCell span="third" data-testid="bento-cell">
           <Card className="h-full">
             <CardHeader title="Top countries" />
-            <CardBody>
+            {/* Centred when there is nothing to show, for the same reason the
+                figures above are: a short message pinned to the top of a tall
+                card leaves the card looking like it lost its contents. */}
+            <CardBody
+              className={
+                overview.countries.length === 0 ? 'flex flex-col justify-center' : undefined
+              }
+            >
               {overview.countries.length === 0 ? (
-                <p className="text-ink-muted text-sm">No data yet.</p>
+                <p className="text-ink-muted text-sm">Nothing recorded yet.</p>
               ) : (
                 <CountryBars countries={overview.countries} />
               )}

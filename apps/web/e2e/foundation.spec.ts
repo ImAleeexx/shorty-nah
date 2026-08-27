@@ -120,6 +120,37 @@ test.describe('design foundation', () => {
     expect(narrow).toBe(1);
   });
 
+  test('gives every cell in a row the same height', async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await page.goto(APP);
+
+    // Grouped by where each cell starts, so this describes rows without knowing
+    // how many there are or which spans made them.
+    const rows = await page.evaluate(() => {
+      const grouped = new Map<number, number[]>();
+
+      for (const cell of document.querySelectorAll('[data-testid="bento-cell"]')) {
+        const box = cell.getBoundingClientRect();
+        const top = Math.round(box.top);
+
+        grouped.set(top, [...(grouped.get(top) ?? []), Math.round(box.height)]);
+      }
+
+      return [...grouped.values()];
+    });
+
+    expect(rows.length).toBeGreaterThan(0);
+
+    // This has regressed once. Cells were briefly sized to their own content, on
+    // the reasoning that an elevated card holding nothing looks unfinished —
+    // which traded one problem for a worse one: three cards at three different
+    // heights in a row have no shared baseline, and a row without a baseline
+    // reads as broken rather than as airy.
+    for (const heights of rows) {
+      expect(new Set(heights).size, `heights in one row: ${heights.join(', ')}`).toBe(1);
+    }
+  });
+
   test('resets every span override on a narrow viewport', async ({ page }) => {
     await page.setViewportSize({ width: 640, height: 900 });
     await page.goto(APP);
