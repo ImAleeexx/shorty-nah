@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Analytics\AnalyticsReader;
+use App\Analytics\OverviewReader;
 use App\Audit\AuditLog;
 use App\Auth\TwoFactor\WebAuthnService;
 use App\Branding\BrandingAssetStore;
@@ -73,6 +74,12 @@ class AppServiceProvider extends ServiceProvider
         // Reads through the read-only ClickHouse identity: a reporting query must
         // not be able to mutate the event store.
         $this->app->singleton(AnalyticsReader::class, fn (Application $app): AnalyticsReader => new AnalyticsReader(
+            connection: $app->make(ClickHouseServiceProvider::READER),
+            settings: $app->make(SettingsStore::class),
+        ));
+
+        // Same read-only identity, for the same reason.
+        $this->app->singleton(OverviewReader::class, fn (Application $app): OverviewReader => new OverviewReader(
             connection: $app->make(ClickHouseServiceProvider::READER),
             settings: $app->make(SettingsStore::class),
         ));

@@ -12,6 +12,7 @@ import { CampaignFields } from '@/components/links/campaign-fields';
 import { QrPanel } from '@/components/links/qr-panel';
 import { RulesEditor, type RoutingRule } from '@/components/links/rules-editor';
 import { Disclosure } from '@/components/ui/disclosure';
+import { Skeleton } from '@/components/ui/skeleton';
 import { apiRequest, type ApiFailure } from '@/lib/client-api';
 import type { CampaignPreset } from '@/lib/campaign';
 import type { DomainRecord, LinkRecord } from '@/lib/links';
@@ -305,7 +306,10 @@ export function LinkSheet({
           <>
             <Disclosure label="Routing rules" testId="rules-disclosure">
               {rules === null ? (
-                <p className="text-ink-muted text-sm">Loading.</p>
+                <div className="flex flex-col gap-3">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-24 w-full" />
+                </div>
               ) : (
                 <RulesEditor linkId={link.id} initial={rules} />
               )}
