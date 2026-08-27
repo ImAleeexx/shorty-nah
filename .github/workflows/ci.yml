@@ -80,6 +80,15 @@ jobs:
             --data-binary "GRANT SELECT ON shortynah_events.* TO shortynah_reader" \
             "http://127.0.0.1:8124/"
 
+      - name: Apply the ClickHouse schema
+        # Laravel's migrator targets Postgres only, so the event store has a
+        # command of its own. Without this every ClickHouse-backed test fails on
+        # `Table shortynah_events.click_events does not exist` — the service
+        # creates the database and nothing creates the tables. It does not
+        # surface locally, where the dev stack has had the schema applied since
+        # the first `make setup`.
+        run: php artisan clickhouse:migrate
+
       - name: Fail if any ClickHouse test skipped
         run: |
           rm -f /tmp/ch.xml
@@ -181,6 +190,12 @@ jobs:
           DB_DATABASE: shortynah
           DB_USERNAME: shortynah
           DB_PASSWORD: ci
+          # The second role the compose files require. Postgres has two on
+          # purpose — one owns the schema, one the application connects as — and
+          # both are declared `required`, so interpolation fails outright
+          # without them rather than falling back to a blank.
+          DB_APP_USERNAME: shortynah_app
+          DB_APP_PASSWORD: ci
           REDIS_PASSWORD: ci
           CLICKHOUSE_DATABASE: shortynah_events
           CLICKHOUSE_WRITE_USERNAME: w
