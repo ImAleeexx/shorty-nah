@@ -42,6 +42,14 @@ final class ResetToFirstBoot extends Command
         $settings->forget(SettingsRegistry::INSTALLED_AT);
         $settings->forget(SettingsRegistry::SETUP_TOKEN_HASH);
 
+        // Returning to first boot has to mean a clean instance, and this setting
+        // in particular: every account was just deleted, so leaving the
+        // requirement standing confines the owner the wizard is about to create
+        // to enrolling a factor — the wizard's own first request answers 403 and
+        // the run cannot proceed. A browser run that fails partway through the
+        // second-factor spec leaves exactly that behind.
+        $settings->set('security.two_factor_required', false);
+
         $issued = $token->ensure();
 
         if ($issued === null) {

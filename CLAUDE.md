@@ -147,6 +147,15 @@ job is pushed to Redis — and completely invisible under the sync queue driver 
 test suite uses. Every import failed with a `500` in a real browser while the
 whole API suite passed.
 
+**Two forms in one component must be keyed apart.** The sign-in form renders a
+password form or a challenge form from the same component, and both open with a
+`<form>`, a `<FormError>` and a `<Field>`. React reconciles by position and type,
+so it kept the password `<input>` DOM node and reused it as the code field: the
+typed password stayed in the box, the `type` flipped from `password` to `text`,
+and it was shown in clear text and submitted as the second factor. Distinct
+`key`s on the two roots are the fix, and the regression test asserts no input
+holds the password.
+
 **`recovery_codes` is nullable, not optional.** They are issued once, on an
 account's *first* factor, so every later enrolment answers `null`. A client that
 guards with `!== undefined` throws on `null.length` — and because that happens
