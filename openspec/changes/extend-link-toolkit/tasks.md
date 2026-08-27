@@ -10,14 +10,14 @@ path, and everything in phase 3 depends on it. A task's verification method is p
 
 ## 2. Geography on the redirect path
 
-- [ ] 2.1 Resolve `GeoResolver` per request from the container in the redirect path, and verify by test that no mmdb handle survives between requests in a long-lived worker
-- [ ] 2.2 Compute the visitor hash during the request rather than during enrichment, and verify two clicks by one visitor in one day share a hash while the same visitor after a salt rotation does not
-- [ ] 2.3 Replace `address` on `ClickEnvelope` with the resolved country, region, city, ASN and visitor hash, and verify the queued payload contains no address by reading the queue directly
-- [ ] 2.4 Stop resolving geography in `ClickEnricher` when the envelope already carries it, and verify by counting resolver calls that a drained envelope performs none
-- [ ] 2.5 Read the datacenter-network decision from the envelope's ASN rather than resolving one, and verify a datacenter ASN is still filtered and a residential one is not
-- [ ] 2.6 Verify the whole pipeline end to end after the move: a redirect produces an enriched ClickHouse row carrying the same geography it did before, with no address at any stage
-- [ ] 2.7 Verify an instance with no geographic databases still redirects, still records clicks, and reports geography as unknown rather than failing
-- [ ] 2.8 Re-run the phase 1 benchmark and verify the added cost is inside the stated budget; record both numbers
+- [x] 2.1 Corrected while implementing: the task asked for a per-request reader, which is wrong. `GeoLookup` is a singleton holding its mmdb readers open on purpose — opening one per lookup would dominate the cost — and a handle is a resource cache, not request state, so it is not what the Octane rule forbids. Verify instead that the resolver retains no request state across requests, and that a database refreshed underneath a running worker is picked up without a restart
+- [x] 2.2 Compute the visitor hash during the request rather than during enrichment, and verify two clicks by one visitor in one day share a hash while the same visitor after a salt rotation does not Done: the hash is computed in the request and travels on the envelope.
+- [x] 2.3 Replace `address` on `ClickEnvelope` with the resolved country, region, city, ASN and visitor hash, and verify the queued payload contains no address by reading the queue directly Done. Asserted over the whole serialised payload rather than one key, so the test proves the address is nowhere in it rather than that a field was renamed.
+- [x] 2.4 Stop resolving geography in `ClickEnricher` when the envelope already carries it, and verify by counting resolver calls that a drained envelope performs none Done, with a deliberate fallback: an envelope queued before this change carries an address and no geography, and a deploy with a non-empty queue must drain it rather than write a batch of unknown countries. For those the original ordering still holds.
+- [x] 2.5 Read the datacenter-network decision from the envelope's ASN rather than resolving one, and verify a datacenter ASN is still filtered and a residential one is not Done.
+- [x] 2.6 Verify the whole pipeline end to end after the move: a redirect produces an enriched ClickHouse row carrying the same geography it did before, with no address at any stage Done against real ClickHouse.
+- [x] 2.7 Verify an instance with no geographic databases still redirects, still records clicks, and reports geography as unknown rather than failing Done: unknown country, still a counted click with a usable visitor hash.
+- [x] 2.8 Re-run the phase 1 benchmark and verify the added cost is inside the stated budget; record both numbers Done: +104.35us, +76.81us, +45.82us against a 540.26us baseline, inside the 150us budget on every run. Both sets of numbers are in `design.md`, along with why the added cost is more than a single mmdb read.
 
 ## 3. Rule-based routing
 

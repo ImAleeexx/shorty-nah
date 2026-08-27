@@ -10,6 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 /**
  * Measures the redirect hot path against a cached link.
@@ -209,7 +210,7 @@ final class BenchmarkRedirect extends Command
         if (! $link instanceof Link) {
             $link = new Link;
             $link->forceFill([
-                'public_id' => (string) \Illuminate\Support\Str::ulid(),
+                'public_id' => (string) Str::ulid(),
                 'domain_id' => $domain->id,
                 'slug' => self::SLUG,
                 'destination' => 'https://example.com/benchmark',

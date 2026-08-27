@@ -7,6 +7,8 @@ use App\Clicks\ArrayClickQueue;
 use App\Clicks\ClickEnvelope;
 use App\Clicks\ClickQueue;
 use App\Clicks\ClickWriter;
+use App\Clicks\GeoResolver;
+use App\Clicks\GeoResult;
 use App\Models\Domain;
 use App\Models\Link;
 use App\Providers\ClickHouseServiceProvider;
@@ -225,4 +227,104 @@ it('records a click made through the redirect path', function (): void {
 
     // The redirect itself never touched the event store.
     DB::enableQueryLog();
+});
+
+// --- 2.6 / 2.7 geography resolved on the redirect path ---
+
+it('lands the country the redirect resolved, with no address at any stage', function (): void {
+    $domain = Domain::factory()->create(['host' => 'pipe.example.test', 'verified_at' => now()]);
+
+    $link = new Link;
+    $link->forceFill([
+        'public_id' => (string) Str::ulid(),
+        'domain_id' => $domain->id,
+        'slug' => 'pipegeo1',
+        'destination' => 'https://example.com/pipeline-geo',
+        'redirect_mode' => 'direct',
+        'click_count' => 0,
+    ])->save();
+
+    app()->instance(GeoResolver::class, new class implements GeoResolver
+    {
+        public function missingDatabases(): bool
+        {
+            return false;
+        }
+
+        public function lookup(?string $address): GeoResult
+        {
+            return new GeoResult('ES', 'Madrid', 'Madrid', 3352, 'Telefonica');
+        }
+    });
+
+    RateLimiter::clear('redirect:198.51.100.42');
+
+    $this->call('GET', 'http://pipe.example.test/pipegeo1', server: ['REMOTE_ADDR' => '198.51.100.42'])
+        ->assertRedirect('https://example.com/pipeline-geo');
+
+    // The queue itself, before anything drains it.
+    $queued = pipelineQueue()->drain(10);
+    expect(json_encode(array_map(fn (ClickEnvelope $e): array => $e->toArray(), $queued)))
+        ->not->toContain('198.51.100.42');
+
+    foreach ($queued as $envelope) {
+        pipelineQueue()->push($envelope);
+    }
+
+    $this->artisan('shortynah:drain-clicks')->assertExitCode(0);
+
+    $row = events()->select(
+        'SELECT country_code, city, asn, as_organisation FROM '.ClickWriter::TABLE.' WHERE link_id = {link:UInt64}',
+        ['link' => $link->id],
+    )[0];
+
+    expect($row['country_code'])->toBe('ES')
+        ->and($row['city'])->toBe('Madrid')
+        ->and((int) $row['asn'])->toBe(3352)
+        ->and($row['as_organisation'])->toBe('Telefonica');
+});
+
+it('still redirects and records when no geographic databases are present', function (): void {
+    $domain = Domain::factory()->create(['host' => 'nogeo.example.test', 'verified_at' => now()]);
+
+    $link = new Link;
+    $link->forceFill([
+        'public_id' => (string) Str::ulid(),
+        'domain_id' => $domain->id,
+        'slug' => 'nogeo001',
+        'destination' => 'https://example.com/no-geo',
+        'redirect_mode' => 'direct',
+        'click_count' => 0,
+    ])->save();
+
+    // What GeoLookup does with no .mmdb files on disk: answers, and says it is
+    // missing its databases. A redirect must not depend on them being there.
+    app()->instance(GeoResolver::class, new class implements GeoResolver
+    {
+        public function missingDatabases(): bool
+        {
+            return true;
+        }
+
+        public function lookup(?string $address): GeoResult
+        {
+            return GeoResult::unknown();
+        }
+    });
+
+    RateLimiter::clear('redirect:198.51.100.43');
+
+    $this->call('GET', 'http://nogeo.example.test/nogeo001', server: ['REMOTE_ADDR' => '198.51.100.43'])
+        ->assertRedirect('https://example.com/no-geo');
+
+    $this->artisan('shortynah:drain-clicks')->assertExitCode(0);
+
+    $row = events()->select(
+        'SELECT country_code, visitor_hash FROM '.ClickWriter::TABLE.' WHERE link_id = {link:UInt64}',
+        ['link' => $link->id],
+    )[0];
+
+    // Unknown geography, but still a counted click with a usable visitor hash.
+    expect($row['country_code'])->toBe('')
+        ->and(mb_strlen((string) $row['visitor_hash']))->toBe(64);
 });

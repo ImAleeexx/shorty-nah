@@ -55,6 +55,20 @@ would measure the per-source rate limiter refusing the request rather than the
 redirect serving it — which is exactly how an early run of this harness reported
 a pass that was really a `429`.
 
+### Measured after the move
+
+Three runs against the recorded baseline of 540.26us, with real GeoLite2 City and
+ASN databases present: **+104.35us, +76.81us, +45.82us**. Inside the 150us budget
+on every run.
+
+That is more than an mmdb read alone accounts for, and the reason is worth
+recording: the redirect now performs *two* lookups (city and ASN) and computes
+the visitor hash, whose daily salt is a Redis read. None of that is new work for
+the product — it is the same work the enricher used to do — but it is new work on
+this path, and the spread across runs still overlaps the ~70us of noise, so the
+honest summary is that the move costs somewhere under 150us and cannot be pinned
+more precisely by this harness.
+
 ### The guarantee that replaces "no work on the hot path"
 
 The original guarantee — a cache hit touches nothing but Redis — is preserved and narrowed: a cache hit

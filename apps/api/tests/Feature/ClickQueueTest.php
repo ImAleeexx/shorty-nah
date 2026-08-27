@@ -65,7 +65,7 @@ it('enqueues one envelope per redirect', function (): void {
         ->and($drained[0]->redirectMode)->toBe('direct');
 });
 
-it('carries the address for enrichment and nothing derived yet', function (): void {
+it('carries what the request resolved and never the address itself', function (): void {
     $domain = queueHost();
     Link::factory()->forDomain($domain)->withSlug('rawenvl1')->create();
 
@@ -73,10 +73,18 @@ it('carries the address for enrichment and nothing derived yet', function (): vo
 
     $envelope = fakeQueue()->drain(1)[0];
 
-    // Raw on purpose: the redirect does no enrichment at all.
-    expect($envelope->address)->toBe('127.0.0.1')
+    // This test used to assert the opposite — that the envelope carried the raw
+    // address, because the redirect did no enrichment at all. Geography now has
+    // to be resolved during the request, since a country rule cannot be applied
+    // after the visitor has already been sent somewhere; and once it has been,
+    // carrying the address as well would put a raw address into Redis to answer
+    // a question already answered.
+    expect($envelope->address)->toBeNull()
+        ->and($envelope->visitorHash)->not->toBeNull()
+        ->and($envelope->geo)->not->toBeNull()
         ->and($envelope->referrer)->toBe('https://news.example.org/story')
-        ->and($envelope->userAgent)->not->toBeNull();
+        ->and($envelope->userAgent)->not->toBeNull()
+        ->and(json_encode($envelope->toArray()))->not->toContain('127.0.0.1');
 });
 
 it('redirects successfully while the event store is unreachable', function (): void {
