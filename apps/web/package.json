@@ -51,7 +51,7 @@
     "stylelint": "^17.14.1",
     "stylelint-config-standard": "^40.0.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "^6",
     "vitest": "^4.1.11"
   },
   "packageManager": "pnpm@11.5.2"
