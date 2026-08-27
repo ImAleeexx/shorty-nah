@@ -14,7 +14,7 @@ import { Stat } from '@/components/ui/stat';
 import { fetchPublicConfiguration } from '@/lib/api';
 import { sanitiseBranding } from '@/lib/branding';
 import { apiGet } from '@/lib/server-api';
-import { currentViewer, owns } from '@/lib/session';
+import { currentViewer, owns, mustEnrolSecondFactor } from '@/lib/session';
 
 type Overview = {
   days: number;
@@ -54,6 +54,13 @@ export default async function DashboardPage() {
 
   if (viewer === null) {
     redirect('/sign-in');
+  }
+
+  // An account the instance confines to enrolment is sent there rather than
+  // shown a refusal it cannot act on. Every route past the requirement answers
+  // 403, so without this the page renders empty and says nothing useful.
+  if (mustEnrolSecondFactor(viewer)) {
+    redirect('/security');
   }
 
   const branding = sanitiseBranding(configuration);

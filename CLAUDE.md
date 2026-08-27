@@ -147,6 +147,20 @@ job is pushed to Redis — and completely invisible under the sync queue driver 
 test suite uses. Every import failed with a `500` in a real browser while the
 whole API suite passed.
 
+**A TOTP step is single-use, so a test cannot reuse one.** The service records
+the accepted *time step* rather than the code, so a step at or before the last
+accepted one is refused as a replay whatever its digits say. Confirming an
+enrolment consumes the step the very next sign-in would otherwise reuse — a
+browser test has to wait for the next thirty-second window between uses.
+
+**The second-factor requirement is instance-wide, so its browser test runs
+alone.** It is tagged `@security` and `make e2e` runs it last with one worker:
+every other spec signs in as the same operator, and turning the requirement on
+alongside them locks them out mid-test. `make e2e-fixture` clears the
+requirement as well as the credentials, because a run that fails partway through
+that spec leaves the one combination — required, nothing enrolled — that locks
+the suite out of its own instance.
+
 **Branding assets need `public/storage`, and the dev bind mount eats it.** Uploads
 are written to `storage/app/public` and referenced as `/storage/...`, which
 resolves only through that symlink. It is created in the image *and* by the

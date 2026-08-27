@@ -113,7 +113,7 @@ final class SessionController
      * what the viewer may do, and a role is not something the browser should be
      * asked to remember across a reload.
      */
-    public function show(Request $request): JsonResponse
+    public function show(Request $request, TwoFactorService $twoFactor): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -124,6 +124,15 @@ final class SessionController
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role->value,
+                // Carried here so the interface knows on the first request that
+                // this account is confined to enrolment. Every other route is
+                // behind the requirement and answers 403, which tells a page
+                // that something is wrong but not what to do about it — and the
+                // operator ends up reading a refusal with nowhere to go.
+                'two_factor' => [
+                    'required' => $twoFactor->required(),
+                    'enrolled' => $twoFactor->enrolled($user),
+                ],
             ],
         ]);
     }
