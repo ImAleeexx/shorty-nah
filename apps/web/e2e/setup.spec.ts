@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -9,11 +10,37 @@ const APP = 'http://localhost:8080';
  * Read from the host-mounted file rather than the container log, because that
  * file is the recovery path the design promises an operator. If this read stops
  * working, the promise has stopped being true.
+ *
+ * The file is written 0600 by the container's own user, which is deliberate —
+ * whoever holds this token owns the instance. Whether the host can read it
+ * therefore depends on whether the two uids happen to match: they do under
+ * Docker Desktop and do not on a Linux runner, where the direct read fails with
+ * EACCES. Falling back to reading it *through* the container tests the same
+ * promise without asking the file to be less protected than it should be.
  */
 function setupToken(): string {
   const path = join(process.cwd(), '..', '..', 'run', 'setup-token');
 
-  return readFileSync(path, 'utf8').trim();
+  try {
+    return readFileSync(path, 'utf8').trim();
+  } catch {
+    return execFileSync(
+      'docker',
+      [
+        'compose',
+        '-f',
+        'compose.yaml',
+        '-f',
+        'compose.dev.yaml',
+        'exec',
+        '-T',
+        'api',
+        'cat',
+        '/var/lib/shortynah/setup/setup-token',
+      ],
+      { cwd: join(process.cwd(), '..', '..'), encoding: 'utf8' },
+    ).trim();
+  }
 }
 
 const OWNER = {
