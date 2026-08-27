@@ -150,6 +150,26 @@ loopback, which is how the browser suite reaches the redirect path. The dev
 Caddyfile splits on `Host`: `APP_DOMAIN` and `127.0.0.1` reach the interface,
 anything else is treated as a short domain.
 
+**Recent authentication is enumerated, not assumed.** The contract names exactly
+five operations — email, password, second factor, API token, and domain
+*deletion*. Branding and domain registration sat behind it anyway, so a save
+fifteen minutes after signing in was refused with a `423`. Nothing caught it:
+every API test builds its administrator with `freshlyAuthenticated()`, which is
+always inside the window. When adding a route to that group, check the spec
+first, and cover it with `staleAuthentication()`.
+
+**A form that renders only per-field errors is a form that fails silently.** A
+`423`, a `419` or a `500` names no field, so rendering `failure.errors` alone
+shows the operator nothing at all — a button that does nothing, indistinguishable
+from a bug. `FormError` exists for this; every form carries one.
+
+**A restore un-hardens the audit log unless it re-applies the grant.** `backup.sh`
+dumps with `--no-privileges` and the restore applies it with `--clean`, so
+`audit_entries` is dropped and recreated carrying the application role's default
+grants — discarding the targeted `REVOKE` that is the whole enforcement.
+`restore.sh` re-applies it and asserts the result; `make verify-audit` is what
+proves it.
+
 **Destination validation refuses loopback**, so a fixture pointing at
 `http://localhost:8080/` must be written with `forceFill`, not through
 `LinkService`. `make e2e-fixture` does this.

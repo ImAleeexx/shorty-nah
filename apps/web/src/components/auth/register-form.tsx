@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/field';
+import { FormError } from '@/components/ui/form-error';
 import { apiRequest, type ApiFailure } from '@/lib/client-api';
 
 export function RegisterForm({ requiresInvitation }: { requiresInvitation: boolean }) {
@@ -43,11 +44,7 @@ export function RegisterForm({ requiresInvitation }: { requiresInvitation: boole
 
   return (
     <form className="flex flex-col gap-5" onSubmit={submit}>
-      {failure !== null && Object.keys(failure.errors).length === 0 ? (
-        <p className="text-critical text-sm" role="alert">
-          {failure.message}
-        </p>
-      ) : null}
+      <FormError failure={failure} />
 
       <Field label="Name" error={failure?.errors.name?.[0]}>
         {({ id, describedBy }) => (

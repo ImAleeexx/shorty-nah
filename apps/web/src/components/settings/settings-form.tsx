@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input, Select } from '@/components/ui/field';
+import { FormError } from '@/components/ui/form-error';
 import { apiRequest, type ApiFailure } from '@/lib/client-api';
 
 export type SettingsValues = Record<string, string | number | boolean | null>;
@@ -91,6 +92,8 @@ export function SettingsForm({
 
   return (
     <form className="flex flex-col gap-5" onSubmit={submit} data-testid={testId}>
+      <FormError failure={failure} />
+
       {fields.map((field) => {
         const error = failure?.errors[`settings.${field.key}`]?.[0];
         const value = values[field.key];

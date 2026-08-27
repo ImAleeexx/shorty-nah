@@ -72,6 +72,27 @@ test.describe('settings', () => {
     await expect(page.getByTestId('accent-input')).toHaveValue(/250\)$/);
   });
 
+  // The bug this covers: branding sat behind recent authentication, so a save
+  // more than fifteen minutes after signing in was refused with a 423 that no
+  // form rendered. Every API test signed in fresh, so the suite never saw it.
+  test('saves branding and keeps it after a reload', async ({ page }) => {
+    await openSettings(page);
+
+    const footer = `Operated by the ${Date.now().toString().slice(-6)} team`;
+
+    await page.getByTestId('footer-input').fill(footer);
+    await page.getByTestId('save-branding').click();
+
+    await expect(page.getByTestId('form-error')).toHaveCount(0);
+
+    // Reloaded rather than asserted against local state: the question is whether
+    // the instance kept it, not whether the input still holds what was typed.
+    await page.reload();
+
+    await expect(page.getByTestId('footer-input')).toHaveValue(footer);
+    await expect(page.locator('footer')).toContainText(footer);
+  });
+
   test('hides the settings surface from an account that does not administrate', async ({
     request,
   }) => {
@@ -82,5 +103,48 @@ test.describe('settings', () => {
 
     // Signed out entirely: the authenticated API refuses before authorization.
     expect([401, 404]).toContain(response.status());
+  });
+});
+
+// The API has carried domain registration since the domain work landed; the
+// settings page rendered a read-only list against it, so this whole flow was
+// unreachable through the interface.
+test.describe('domains', () => {
+  const HOST = `d${Date.now().toString().slice(-8)}.example.test`;
+
+  test('registers a domain, reports an honest check, and removes it', async ({ page }) => {
+    await openSettings(page);
+
+    await page.getByTestId('domain-host').fill(HOST);
+    await page.getByTestId('save-domain').click();
+
+    const row = page.locator(`[data-testid="domain-row"][data-host="${HOST}"]`);
+
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('unverified');
+
+    // The host does not resolve to this instance, and the interface says so
+    // rather than reporting a check that did not happen as a success.
+    await page.getByTestId(`verify-${HOST}`).click();
+    await expect(page.getByText(/did not verify/i)).toBeVisible();
+
+    // An unverified domain is never offered as primary.
+    await expect(page.getByTestId(`promote-${HOST}`)).toHaveCount(0);
+
+    await page.getByTestId(`remove-${HOST}`).click();
+    await page.getByTestId('confirm-remove-domain').click();
+
+    await expect(row).toHaveCount(0);
+  });
+
+  test('never offers to remove the primary domain', async ({ page }) => {
+    await openSettings(page);
+
+    // Located on the row's own attribute, not its text: a non-primary row
+    // carries a "Make primary" button, so matching on text selects the wrong row.
+    const primary = page.locator('[data-testid="domain-row"][data-primary="true"]');
+
+    await expect(primary).not.toHaveCount(0);
+    await expect(primary.getByRole('button', { name: /Remove/ })).toHaveCount(0);
   });
 });

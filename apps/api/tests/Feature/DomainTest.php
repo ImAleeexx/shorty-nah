@@ -7,7 +7,9 @@ use App\Domains\DomainException;
 use App\Domains\DomainRegistry;
 use App\Domains\DomainService;
 use App\Domains\DomainVerifier;
+use App\Enums\Role;
 use App\Models\Domain;
+use App\Models\User;
 use App\Settings\SettingsStore;
 
 /**
@@ -241,4 +243,24 @@ it('answers from cache without querying the database', function (): void {
     // This runs before a certificate exists, so it must not depend on the
     // database being reachable.
     expect(DB::getQueryLog())->toBeEmpty();
+});
+
+// Registering, verifying and promoting a domain are instance configuration, not
+// credential changes. Deletion is the one the contract names, and it keeps the
+// challenge — it destroys links, which is not recoverable.
+it('registers a domain with a session older than the re-authentication window', function (): void {
+    $admin = User::factory()->staleAuthentication()->create(['role' => Role::Admin]);
+
+    $this->actingAs($admin)
+        ->postJson('/api/v1/domains', ['host' => 'stale.example.test'])
+        ->assertCreated();
+});
+
+it('still challenges a stale session before deleting a domain', function (): void {
+    $admin = User::factory()->staleAuthentication()->create(['role' => Role::Admin]);
+    $domain = Domain::factory()->create();
+
+    $this->actingAs($admin)
+        ->deleteJson('/api/v1/domains/'.$domain->public_id)
+        ->assertStatus(423);
 });

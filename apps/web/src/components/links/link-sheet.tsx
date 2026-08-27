@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/field';
+import { FormError } from '@/components/ui/form-error';
 import { Sheet } from '@/components/ui/sheet';
 import { apiRequest, type ApiFailure } from '@/lib/client-api';
 import type { DomainRecord, LinkRecord } from '@/lib/links';
@@ -96,11 +97,7 @@ export function LinkSheet({
       }
     >
       <form id="link-form" className="flex flex-col gap-5" onSubmit={submit}>
-        {failure !== null && Object.keys(failure.errors).length === 0 ? (
-          <p className="text-critical text-sm" role="alert">
-            {failure.message}
-          </p>
-        ) : null}
+        <FormError failure={failure} />
 
         <Field
           label="Destination"
