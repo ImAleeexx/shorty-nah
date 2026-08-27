@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/field';
 import { FormError } from '@/components/ui/form-error';
 import { apiRequest, type ApiFailure } from '@/lib/client-api';
+import { useMounted } from '@/lib/use-mounted';
+import { createPasskey, passkeysAvailable } from '@/lib/webauthn';
 
 export type Credential = {
   id: string;
@@ -47,6 +49,39 @@ export function FactorManager({
   const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
   const [code, setCode] = useState('');
   const [recovery, setRecovery] = useState<string[] | null>(null);
+
+  // Gated on hydration, not read in a useState initializer. The initializer runs
+  // on the server (no window, false) and again during the client's hydration
+  // render (true), so the button would exist in one tree and not the other —
+  // the same mismatch the colour-mode toggle had, and React resolves it by
+  // keeping the server's markup, which is the version without the button.
+  const mounted = useMounted();
+  const passkeysSupported = mounted && passkeysAvailable();
+
+  // The list is held locally as well as rendered from the server.
+  // `router.refresh()` alone does not reliably surface a passkey that was just
+  // registered: the credential is stored and confirmed, and the row appears only
+  // after a full reload — which reads as the registration having failed.
+  // Re-reading the list after every change makes the screen agree with the
+  // instance immediately, and the refresh still runs so the server view catches
+  // up behind it.
+  const [rows, setRows] = useState(credentials);
+  const [shownFor, setShownFor] = useState(credentials);
+
+  if (shownFor !== credentials) {
+    setShownFor(credentials);
+    setRows(credentials);
+  }
+
+  async function reload() {
+    const result = await apiRequest<{ credentials: Credential[] }>('/api/v1/auth/two-factor');
+
+    if (result.ok) {
+      setRows(result.data.credentials);
+    }
+
+    router.refresh();
+  }
 
   function report(result: ApiFailure) {
     if (result.status === 423) {
@@ -115,7 +150,70 @@ export function FactorManager({
     }
 
     toast.success('Second factor enrolled', { id: 'two-factor' });
-    router.refresh();
+    await reload();
+  }
+
+  async function addPasskey() {
+    setBusy(true);
+    setFailure(null);
+
+    const options = await apiRequest<Record<string, unknown>>(
+      '/api/v1/auth/two-factor/passkey/options',
+      { method: 'POST' },
+    );
+
+    if (!options.ok) {
+      setBusy(false);
+      report(options);
+
+      return;
+    }
+
+    let credential: string;
+
+    try {
+      credential = await createPasskey(
+        options.data as unknown as Parameters<typeof createPasskey>[0],
+      );
+    } catch {
+      setBusy(false);
+
+      // A cancelled prompt is the ordinary case, not a failure worth a banner:
+      // the operator changed their mind or the key was not present.
+      toast.error('No passkey was registered', {
+        id: 'passkey',
+        description: 'The prompt was dismissed, or this device offered no key.',
+      });
+
+      return;
+    }
+
+    // recovery_codes is null for anything but the account's first factor — they
+    // are issued once, not per factor — so this is nullable, not optional.
+    // Treating it as merely optional made `null.length` throw after a successful
+    // registration, which skipped the refresh and left the new passkey invisible
+    // until a full reload.
+    const result = await apiRequest<{ recovery_codes: string[] | null }>(
+      '/api/v1/auth/two-factor/passkey',
+      { method: 'POST', body: { name: 'Passkey', credential } },
+    );
+
+    setBusy(false);
+
+    if (!result.ok) {
+      report(result);
+
+      return;
+    }
+
+    const issued = result.data.recovery_codes;
+
+    if (issued !== null && issued.length > 0) {
+      setRecovery(issued);
+    }
+
+    toast.success('Passkey registered', { id: 'passkey' });
+    await reload();
   }
 
   async function remove(credential: Credential) {
@@ -135,7 +233,7 @@ export function FactorManager({
     }
 
     toast.success(`${credential.name} removed`, { id: `factor-${credential.id}` });
-    router.refresh();
+    await reload();
   }
 
   return (
@@ -189,11 +287,11 @@ export function FactorManager({
         </div>
       )}
 
-      {credentials.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="text-ink-muted text-sm">No second factor on this account.</p>
       ) : (
         <ul className="border-border divide-border divide-y rounded-(--radius-token) border">
-          {credentials.map((credential) => (
+          {rows.map((credential) => (
             <li
               key={credential.id}
               className="flex items-center justify-between gap-4 px-4 py-3"
@@ -225,7 +323,7 @@ export function FactorManager({
         </ul>
       )}
 
-      {credentials.length > 0 && recoveryRemaining > 0 ? (
+      {rows.length > 0 && recoveryRemaining > 0 ? (
         <p className="text-ink-muted text-xs">
           <span className="tabular">{recoveryRemaining}</span> recovery{' '}
           {recoveryRemaining === 1 ? 'code' : 'codes'} remaining.
@@ -233,7 +331,7 @@ export function FactorManager({
       ) : null}
 
       {enrolment === null ? (
-        <div>
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             intent="primary"
             size="md"
@@ -244,6 +342,19 @@ export function FactorManager({
             <Plus size={14} />
             Add an authenticator app
           </Button>
+
+          {passkeysSupported ? (
+            <Button
+              intent="outline"
+              size="md"
+              disabled={busy}
+              onClick={() => void addPasskey()}
+              data-testid="add-passkey"
+            >
+              <LockKey size={14} />
+              Add a passkey
+            </Button>
+          ) : null}
         </div>
       ) : (
         <form
@@ -252,8 +363,24 @@ export function FactorManager({
           data-testid="enrolment-form"
         >
           <p className="text-ink text-sm">
-            Add this secret to your authenticator app, then enter the code it shows.
+            Scan this with your authenticator app, then enter the code it shows.
           </p>
+
+          {/* Rendered by the API from the credential, not from a URI this page
+              hands it: a renderer that draws whatever it is given is a way to
+              make the instance serve an arbitrary payload as an image under its
+              own origin. The image carries the shared secret, so it is fetched
+              fresh and never cached. */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- a no-store
+              image generated per enrolment, not an asset. */}
+          <img
+            src={`/api/v1/auth/two-factor/${enrolment.id}/qr`}
+            alt="Scan this code with an authenticator app"
+            className="border-border size-40 rounded-(--radius-token-sm) border bg-white p-2"
+            data-testid="enrolment-qr"
+          />
+
+          <p className="text-ink-muted text-xs">No camera? Enter this secret by hand instead.</p>
 
           {/* The secret as text, not only a QR code. A QR needs a camera and a
               second device; the secret works with a password manager on the

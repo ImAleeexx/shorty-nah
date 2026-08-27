@@ -147,6 +147,12 @@ job is pushed to Redis — and completely invisible under the sync queue driver 
 test suite uses. Every import failed with a `500` in a real browser while the
 whole API suite passed.
 
+**`recovery_codes` is nullable, not optional.** They are issued once, on an
+account's *first* factor, so every later enrolment answers `null`. A client that
+guards with `!== undefined` throws on `null.length` — and because that happens
+after a successful registration, the credential is stored while the screen never
+updates, which reads exactly like the registration having failed.
+
 **A TOTP step is single-use, so a test cannot reuse one.** The service records
 the accepted *time step* rather than the code, so a step at or before the last
 accepted one is refused as a replay whatever its digits say. Confirming an

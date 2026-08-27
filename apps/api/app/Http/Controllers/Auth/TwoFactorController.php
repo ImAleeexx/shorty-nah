@@ -11,13 +11,16 @@ use App\Auth\TwoFactor\PendingChallenge;
 use App\Auth\TwoFactor\TwoFactorException;
 use App\Auth\TwoFactor\TwoFactorService;
 use App\Auth\TwoFactor\WebAuthnService;
+use App\Branding\QrRenderer;
 use App\Models\TwoFactorCredential;
 use App\Models\User;
 use App\Settings\SettingsStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
  * Enrolment, and the challenge that stands between a password and a session.
@@ -78,6 +81,58 @@ final class TwoFactorController
             'secret' => $enrolment['secret'],
             'uri' => $enrolment['uri'],
         ], 201, ['Cache-Control' => 'no-store']);
+    }
+
+    /**
+     * The enrolment as a QR code, for the camera on a phone.
+     *
+     * Rendered server-side from the credential rather than from a URI the caller
+     * supplies: a renderer that draws whatever it is handed is a way to make
+     * this instance serve an arbitrary payload as an image under its own
+     * origin.
+     *
+     * Unconfirmed credentials only. Once a factor is confirmed the code is spent
+     * — re-serving it would turn a settings page into a permanent source of the
+     * account's TOTP secret.
+     */
+    public function qr(
+        Request $request,
+        string $publicId,
+        QrRenderer $renderer,
+        TwoFactorService $twoFactor,
+        SettingsStore $settings,
+    ): SymfonyResponse {
+        /** @var User $user */
+        $user = $request->user();
+
+        $credential = TwoFactorCredential::query()
+            ->where('public_id', $publicId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        // Someone else's enrolment, a confirmed one, and one that never existed
+        // are indistinguishable from here.
+        if (! $credential instanceof TwoFactorCredential
+            || $credential->type !== TwoFactorCredential::TOTP
+            || $credential->isConfirmed()) {
+            return new JsonResponse(status: 404);
+        }
+
+        $uri = $twoFactor->provisioningUri(
+            $credential,
+            $user,
+            (string) ($settings->string('instance.name') ?? 'Shorty-Nah'),
+        );
+
+        $code = $renderer->render($uri, 'svg');
+
+        return new Response($code->body, 200, [
+            'Content-Type' => $code->contentType,
+            // This image carries the shared secret. It must not be written to a
+            // disk cache, a proxy, or anything between here and the screen.
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     /**
