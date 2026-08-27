@@ -85,6 +85,20 @@ final class SessionController
             return new JsonResponse([
                 'two_factor_required' => true,
                 'recovery_codes_remaining' => $twoFactor->remainingRecoveryCodes($user),
+                // Which kinds of factor this account actually holds, so the
+                // challenge can ask for one it has. Without this the interface
+                // asks every account for an authenticator code, including
+                // accounts whose only factor is a passkey — a prompt that
+                // cannot be satisfied.
+                //
+                // It discloses nothing a correct password has not already
+                // established: this response is only reached by someone who
+                // supplied one.
+                'methods' => $twoFactor->confirmedCredentials($user)
+                    ->pluck('type')
+                    ->unique()
+                    ->values()
+                    ->all(),
             ], 202, ['Cache-Control' => 'no-store']);
         }
 

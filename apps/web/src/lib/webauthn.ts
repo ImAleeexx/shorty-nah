@@ -77,3 +77,47 @@ export async function createPasskey(options: CreationOptions): Promise<string> {
     clientExtensionResults: created.getClientExtensionResults(),
   });
 }
+
+type RequestOptions = {
+  challenge: string;
+  allowCredentials?: { id: string; type: string }[];
+};
+
+/**
+ * Runs the authentication ceremony and returns what the server needs to verify,
+ * serialised the way it expects.
+ *
+ * Deliberately not named `usePasskey`: a `use` prefix makes the lint rules treat
+ * a plain async function as a React hook and refuse every call site.
+ */
+export async function authenticateWithPasskey(options: RequestOptions): Promise<string> {
+  const asserted = (await navigator.credentials.get({
+    publicKey: {
+      ...options,
+      challenge: toBuffer(options.challenge),
+      allowCredentials: (options.allowCredentials ?? []).map((entry) => ({
+        ...entry,
+        id: toBuffer(entry.id),
+      })),
+    } as unknown as PublicKeyCredentialRequestOptions,
+  })) as PublicKeyCredential | null;
+
+  if (asserted === null) {
+    throw new Error('No credential was returned.');
+  }
+
+  const assertion = asserted.response as AuthenticatorAssertionResponse;
+
+  return JSON.stringify({
+    id: asserted.id,
+    rawId: toBase64Url(asserted.rawId),
+    type: asserted.type,
+    response: {
+      clientDataJSON: toBase64Url(assertion.clientDataJSON),
+      authenticatorData: toBase64Url(assertion.authenticatorData),
+      signature: toBase64Url(assertion.signature),
+      userHandle: assertion.userHandle === null ? null : toBase64Url(assertion.userHandle),
+    },
+    clientExtensionResults: asserted.getClientExtensionResults(),
+  });
+}

@@ -13,6 +13,9 @@ const APP = 'http://localhost:8080';
 
 const OPERATOR = { email: 'e2e@example.test', password: 'a quiet lantern drifts' };
 
+/** The fixture account whose only second factor is a passkey. */
+const PASSKEY_ONLY = { email: 'passkey@example.test', password: 'a second quiet lantern drifts' };
+
 /** Chrome's virtual authenticator: the real ceremony, without hardware. */
 const AUTHENTICATOR = {
   protocol: 'ctap2' as const,
@@ -244,6 +247,137 @@ test.describe('@security instance-wide second factor', () => {
 
     await expect(page.getByTestId('factor-row')).toHaveCount(before + 1);
     await expect(page.getByTestId('factor-row').filter({ hasText: 'Passkey' })).toBeVisible();
+  });
+
+  test('never carries the password into the second-factor field', async ({ page, context }) => {
+    await context.clearCookies();
+
+    await page.goto(`${APP}/sign-in`);
+    await page.getByLabel('Email').fill(OPERATOR.email);
+    await page.getByLabel('Password').fill(OPERATOR.password);
+    await page.getByTestId('sign-in').click();
+
+    const code = page.getByTestId('two-factor-code');
+
+    await expect(code).toBeVisible();
+
+    // The reported bug. Both forms rendered a <form>, a <FormError> and then a
+    // <Field>, so React reconciled by position and kept the password <input>
+    // DOM node as the code field: the typed password stayed in the box, the
+    // type flipped from password to text, and it was on screen in clear text
+    // and about to be submitted as the second factor.
+    await expect(code).toHaveValue('');
+
+    const onScreen = await page.locator('form').innerText();
+
+    expect(onScreen).not.toContain(OPERATOR.password);
+
+    // And no input anywhere is holding it, visible or not.
+    const values = await page
+      .locator('input')
+      .evaluateAll((nodes) => nodes.map((node) => (node as HTMLInputElement).value));
+
+    expect(values).not.toContain(OPERATOR.password);
+  });
+
+  test('offers a passkey rather than a code an account cannot produce', async ({
+    page,
+    context,
+  }) => {
+    await context.clearCookies();
+
+    const client = await page.context().newCDPSession(page);
+
+    await client.send('WebAuthn.enable');
+    await client.send('WebAuthn.addVirtualAuthenticator', { options: AUTHENTICATOR });
+
+    async function signInAsPasskeyAccount() {
+      await page.goto(`${APP}/sign-in`);
+      await page.getByLabel('Email').fill(PASSKEY_ONLY.email);
+      await page.getByLabel('Password').fill(PASSKEY_ONLY.password);
+      await page.getByTestId('sign-in').click();
+    }
+
+    /**
+     * Waits for whichever outcome the sign-in has, rather than sampling once.
+     *
+     * The fixture clears this account's credentials and the passkey spec may
+     * have registered one before this runs, so both are legitimate. Reading
+     * visibility the instant the click returns finds neither, and the branch it
+     * then takes waits forever for a navigation that is not coming.
+     */
+    async function settled(): Promise<'challenged' | 'signed-in'> {
+      await page.waitForFunction(
+        () =>
+          document.querySelector('[data-testid="two-factor-challenge"]') !== null ||
+          !window.location.pathname.startsWith('/sign-in'),
+      );
+
+      return (await page.getByTestId('two-factor-challenge').count()) > 0
+        ? 'challenged'
+        : 'signed-in';
+    }
+
+    await signInAsPasskeyAccount();
+
+    // Whether the key on this account belongs to *this* test's authenticator.
+    // A virtual authenticator is per-context, so a passkey the passkey spec
+    // registered earlier in the run is not one this browser can offer — the
+    // account is challenged for a credential nothing here holds.
+    const registeredHere = (await settled()) === 'signed-in';
+
+    if (registeredHere) {
+      await page.goto(`${APP}/security`);
+      await page.getByTestId('add-passkey').click();
+      await expect(page.getByTestId('factor-row')).not.toHaveCount(0);
+
+      await context.clearCookies();
+      await signInAsPasskeyAccount();
+      await settled();
+    }
+
+    await expect(page.getByTestId('two-factor-challenge')).toBeVisible();
+
+    // An account whose only factor is a passkey was previously shown an
+    // authenticator field it could never satisfy.
+    await expect(page.getByTestId('use-passkey')).toBeVisible();
+    await expect(page.getByTestId('two-factor-code')).toHaveCount(0);
+
+    // And it actually signs in — asserted only when this test registered the
+    // key, because otherwise the credential lives in another context's
+    // authenticator and no prompt here can satisfy it.
+    if (registeredHere) {
+      await page.getByTestId('use-passkey').click();
+      await expect(page).toHaveURL(`${APP}/`);
+    }
+  });
+
+  test('keeps the recovery code behind a control rather than on the page', async ({
+    page,
+    context,
+  }) => {
+    await context.clearCookies();
+
+    await page.goto(`${APP}/sign-in`);
+    await page.getByLabel('Email').fill(OPERATOR.email);
+    await page.getByLabel('Password').fill(OPERATOR.password);
+    await page.getByTestId('sign-in').click();
+
+    await expect(page.getByTestId('two-factor-challenge')).toBeVisible();
+
+    // A recovery code is the way in when the factor is unreachable, not the
+    // ordinary route. Offering it beside the code field every time invites its
+    // use over the factor it exists to back up.
+    await expect(page.getByTestId('recovery-code')).toHaveCount(0);
+
+    await page.getByTestId('toggle-recovery').click();
+
+    await expect(page.getByTestId('recovery-code')).toBeVisible();
+    await expect(page.getByTestId('two-factor-code')).toHaveCount(0);
+
+    await page.getByTestId('toggle-recovery').click();
+
+    await expect(page.getByTestId('two-factor-code')).toBeVisible();
   });
 
   test('challenges the enrolled factor on the next sign-in', async ({ page, context }) => {
