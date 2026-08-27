@@ -1,12 +1,11 @@
-# Findings that are deliberate, listed by fingerprint so they are exempt one at
-# a time. Allowlisting the file instead would hide the next real one.
-
-# Credentials for the ClickHouse service container that exists only for the
-# duration of a CI job. They authenticate nothing outside that job, and they are
-# in the workflow because the service is configured from the same file.
-3177840a22379730793f434175490b44decd085b:.github/workflows/ci.yml:curl-auth-user:74
-
-# The same finding as seen by the working-tree scan, which fingerprints by path
-# and line rather than by commit.
-/repo/.github/workflows/ci.yml:curl-auth-user:74
-.github/workflows/ci.yml:curl-auth-user:74
+# Deliberate findings are exempted in .gitleaks.toml by value, not listed here
+# by fingerprint.
+#
+# Fingerprints identify a finding by commit, path, rule and line. Three of those
+# four change for reasons that have nothing to do with whether the string is a
+# secret: editing the file above it, or rewriting history. Both happened here,
+# and each time the exemption silently stopped applying and the scan failed on a
+# credential that had not changed at all.
+#
+# Allowlisting a whole file would hide the next real finding in it. Allowlisting
+# the exact value does not.

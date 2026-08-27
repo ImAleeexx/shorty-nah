@@ -38,4 +38,16 @@ paths = [
 regexes = [
   # The application key placeholder in documentation and CI.
   '''base64:AAAA+''',
+
+  # The ClickHouse service-container credentials in the CI workflow. They exist
+  # for the life of one job and authenticate nothing outside it.
+  #
+  # Matched by value rather than by fingerprint, and that is the point. This was
+  # ignored by a `path:rule:line` fingerprint, which broke twice in one day:
+  # once when an edit moved the line, and once when a history rewrite changed
+  # every commit SHA the other fingerprint was pinned to. A line number and a
+  # commit hash are both the wrong identity for "this exact string is fine".
+  # The value is narrow enough that a real credential in the same file is still
+  # reported.
+  '''shortynah_(writer|reader):ci-(writer|reader)''',
 ]

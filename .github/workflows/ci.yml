@@ -342,6 +342,19 @@ jobs:
             echo "BACKUP_KEY=$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
           } >> .env
 
+      # The dev override mounts the host tree, and the container runs as its own
+      # user whose uid does not match the runner's. Laravel's first log line then
+      # fails with EACCES and the api container never becomes healthy. Locally
+      # the uids happen to line up, which is why this only appears here.
+      - name: Make the mounted storage writable by the container user
+        run: |
+          mkdir -p apps/api/storage/logs \
+                   apps/api/storage/framework/cache/data \
+                   apps/api/storage/framework/sessions \
+                   apps/api/storage/framework/views \
+                   apps/api/bootstrap/cache
+          chmod -R a+rwX apps/api/storage apps/api/bootstrap/cache
+
       - name: Bring the stack up
         run: |
           make up
