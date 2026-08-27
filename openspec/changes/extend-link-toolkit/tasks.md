@@ -5,8 +5,8 @@ path, and everything in phase 3 depends on it. A task's verification method is p
 
 ## 1. Baseline
 
-- [ ] 1.1 Record a benchmark of the redirect hot path against a cached link before any change, in the same conditions the after-measurement will use, and commit the numbers and the method so the comparison is reproducible rather than remembered
-- [ ] 1.2 State the added-cost budget for geographic resolution in `design.md` as a number, and verify the benchmark harness fails when the budget is exceeded by temporarily setting it below the measured baseline
+- [x] 1.1 Record a benchmark of the redirect hot path against a cached link before any change, in the same conditions the after-measurement will use, and commit the numbers and the method so the comparison is reproducible rather than remembered. Three runs recorded in `design.md`; the harness drives 256 addresses because one address measures the per-source limiter instead — an early run reported a pass that was really a `429`
+- [x] 1.2 State the added-cost budget for geographic resolution in `design.md` as a number, and verify the benchmark harness fails when the budget is exceeded by temporarily setting it below the measured baseline. Confirmed: an impossible budget exits 1 and names the overrun. The budget is 150us and `design.md` states plainly that this cannot resolve the mmdb read itself — run-to-run noise is ~70us — only an order-of-magnitude regression such as a network call arriving on the path
 
 ## 2. Geography on the redirect path
 

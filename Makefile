@@ -187,3 +187,11 @@ verify-clean-host: ## Destroy everything and prove one command reaches the wizar
 	./scripts/verify-clean-host.sh
 
 ci: lint analyse typecheck test check-pins check-secrets check-ports verify-schema verify-audit ## Run the full quality gate
+
+bench: ## Measure the redirect hot path against the recorded baseline
+	$(API) php artisan shortynah:bench-redirect --iterations=2000 --warmup=400 \
+		--compare=storage/bench/redirect-baseline.json --budget-us=150
+
+bench-record: ## Record a new redirect baseline (do this before changing the hot path)
+	$(API) php artisan shortynah:bench-redirect --iterations=2000 --warmup=400 \
+		--record=storage/bench/redirect-baseline.json

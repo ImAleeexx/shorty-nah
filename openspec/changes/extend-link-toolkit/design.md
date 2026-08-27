@@ -29,6 +29,32 @@ them explicitly.
 The reader must be resolved from the container per request and never held in a property of a singleton
 — an mmdb handle in a long-lived worker is exactly the kind of state the Octane rules exist for.
 
+### The measured baseline, and what the budget can actually prove
+
+Recorded before any change, on the development stack, with:
+
+```
+php artisan shortynah:bench-redirect --iterations=2000 --warmup=400 \
+    --record=storage/bench/redirect-baseline.json
+```
+
+Three consecutive runs, mean microseconds per request through the HTTP kernel
+against a cached link: **470.92, 532.00, 540.26** (p50 447.75, 521.67, 530.67).
+
+Run-to-run variance is therefore around 70us, or roughly 15%. **The budget is
+150us on the mean**, and it is worth being explicit about what that can and
+cannot establish. A memory-mapped MaxMind read costs single-digit to low
+double-digit microseconds — comfortably inside the noise, so this harness cannot
+measure the lookup itself and does not claim to. What it can catch is the failure
+that actually matters: a network call, a socket, or a database query arriving on
+this path, each of which costs milliseconds and would clear 150us by an order of
+magnitude. That is the regression worth a gate.
+
+The benchmark drives 256 addresses across eight real public prefixes. One address
+would measure the per-source rate limiter refusing the request rather than the
+redirect serving it — which is exactly how an early run of this harness reported
+a pass that was really a `429`.
+
 ### The guarantee that replaces "no work on the hot path"
 
 The original guarantee — a cache hit touches nothing but Redis — is preserved and narrowed: a cache hit
