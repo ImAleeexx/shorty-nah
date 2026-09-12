@@ -33,8 +33,10 @@ final class TrustedProxies
      */
     public static function parse(string $value): array
     {
+        // Commas or whitespace: the application reads a comma list, the edge
+        // reads the same ranges space-separated, and one value feeds both.
         $entries = array_values(array_filter(
-            array_map(static fn (string $entry): string => trim($entry), explode(',', $value)),
+            preg_split('/[\s,]+/', $value) ?: [],
             static fn (string $entry): bool => $entry !== '',
         ));
 

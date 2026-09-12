@@ -54,3 +54,8 @@ it('parses a comma separated list of ranges', function (): void {
     expect(TrustedProxies::parse('172.29.0.0/16, 10.0.0.1 ,'))
         ->toBe(['172.29.0.0/16', '10.0.0.1']);
 });
+
+it('accepts whitespace between ranges, which is how the edge lists them', function (): void {
+    expect(TrustedProxies::parse('172.29.0.0/16,10.0.0.1/32 10.0.0.2/32'))
+        ->toBe(['172.29.0.0/16', '10.0.0.1/32', '10.0.0.2/32']);
+});

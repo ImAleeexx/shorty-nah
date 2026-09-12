@@ -12,7 +12,7 @@ WEB          := $(COMPOSE) exec web
 
 .PHONY: help up prod-up down restart logs ps setup build sh tinker migrate fresh ch-migrate setup-token token-dir bootstrap-app-role \
         test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins lint-syntax e2e-fixture \
-        queue-status backup restore e2e-setup e2e-setup-fixture check-secrets check-ports verify-schema verify-audit verify-postgres-guard verify-shutdown verify-restore verify-clean-host scan scan-dependencies scan-secrets scan-images
+        queue-status backup restore e2e-setup e2e-setup-fixture check-secrets check-ports verify-schema verify-audit verify-postgres-guard verify-edge-proxied verify-shutdown verify-restore verify-clean-host scan scan-dependencies scan-secrets scan-images
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -180,6 +180,9 @@ verify-audit: ## Verify the audit log cannot be rewritten by the application
 verify-postgres-guard: ## Verify Postgres refuses a half-initialised volume
 	./scripts/verify-postgres-guard.sh
 
+verify-edge-proxied: ## Verify the edge behind another proxy trusts only that proxy
+	./scripts/verify-edge-proxied.sh
+
 ## --- Supply chain (slow; run before a release, and in CI) ---
 
 scan: scan-dependencies scan-secrets scan-images ## Run every supply-chain scan
@@ -204,7 +207,7 @@ verify-restore: ## Destroy this instance and prove the backup restores it
 verify-clean-host: ## Destroy everything and prove one command reaches the wizard
 	./scripts/verify-clean-host.sh
 
-ci: lint analyse typecheck test check-pins check-secrets check-ports verify-schema verify-audit verify-postgres-guard ## Run the full quality gate
+ci: lint analyse typecheck test check-pins check-secrets check-ports verify-schema verify-audit verify-postgres-guard verify-edge-proxied ## Run the full quality gate
 
 bench: ## Measure the redirect hot path against the recorded baseline
 	$(API) php artisan shortynah:bench-redirect --iterations=2000 --warmup=400 \

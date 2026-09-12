@@ -132,13 +132,33 @@ A few values in `.env` are worth understanding:
 | Value | Why it matters |
 |---|---|
 | `TRUSTED_PROXIES` | The edge's network, never `*`. Trusting every peer lets any client spoof its address, which defeats rate limiting and forges every geographic figure. |
+| `UPSTREAM_PROXIES` | Set only when another proxy terminates TLS in front of the instance. See below. |
 | `DB_USERNAME` / `DB_APP_USERNAME` | Two roles on purpose. The first owns the schema; the application connects as the second, which holds no `UPDATE` or `DELETE` on the audit table. That missing privilege is what makes the audit log append-only. |
 | `BACKUP_KEY` | Encrypts backups. They contain the settings store and the key that decrypts its secrets, so losing this makes every backup unreadable — which is the point. |
+
+### Behind another proxy
+
+If a reverse proxy you already run terminates TLS and forwards to this host,
+tell the edge so:
+
+```bash
+UPSTREAM_PROXIES=10.0.0.5/32     # that proxy's address, or ranges, space-separated
+```
+
+The edge then serves plain HTTP on `HTTP_PORT`, stops redirecting to HTTPS — the
+two would otherwise loop — and believes `X-Forwarded-*` headers from those
+addresses alone, passing them through so the application still sees each
+visitor's own address and scheme. From any other peer the headers are replaced,
+so nobody can pick the address the rate limiter sees. Point your proxy at
+`http://this-host:80` with forwarding headers on, and register every short
+domain with it as well as in the interface: the edge cannot issue certificates
+for them from behind a proxy, so yours has to.
 
 ## Running it
 
 ```bash
-make up          # start
+make up          # start, development
+make prod-up     # start, production
 make down        # stop
 make logs        # follow everything
 make ps          # what is running, and whether it is healthy

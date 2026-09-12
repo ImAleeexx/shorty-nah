@@ -46,8 +46,11 @@ x-api-env: &api-env
   # a bind mount; the file itself is written 0600.
   SETUP_TOKEN_PATH: /var/lib/shortynah/setup/setup-token
   # Same variable as the network subnet below: the application must trust
-  # exactly the network the edge sits on, and never a wildcard.
-  TRUSTED_PROXIES: ${INTERNAL_SUBNET:-172.29.0.0/16}
+  # exactly the network the edge sits on, and never a wildcard. A proxy in
+  # front of the edge is appended: the edge passes its headers through, and
+  # its own address ends up in X-Forwarded-For, so the application has to
+  # skip it as well to reach the visitor's address.
+  TRUSTED_PROXIES: ${INTERNAL_SUBNET:-172.29.0.0/16}${UPSTREAM_PROXIES:+,${UPSTREAM_PROXIES}}
 
 x-api-depends: &api-depends
   postgres:
@@ -101,12 +104,18 @@ services:
       # acme_dns directive. Keeps HTTP-01 the default for instances that can
       # answer it.
       CADDY_ACME_DNS: ${CLOUDFLARE_API_TOKEN:+acme_dns cloudflare ${CLOUDFLARE_API_TOKEN}}
+      # Set only when another proxy terminates TLS in front of this instance.
+      # Read by Caddyfile.proxied, which the volume below selects on the same
+      # condition.
+      UPSTREAM_PROXIES: ${UPSTREAM_PROXIES:-}
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
       - "${HTTPS_PORT:-443}:443/udp"
     volumes:
-      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # With an upstream proxy declared the edge speaks plain HTTP and trusts
+      # that proxy's forwarding headers; without one it owns TLS itself.
+      - ./docker/caddy/Caddyfile${UPSTREAM_PROXIES:+.proxied}:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     healthcheck:

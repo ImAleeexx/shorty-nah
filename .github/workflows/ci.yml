@@ -232,6 +232,12 @@ jobs:
             caddy:2-alpine caddy validate --config /f --adapter caddyfile
           docker run --rm -v "$PWD/docker/caddy/Caddyfile.dev:/f:ro" \
             caddy:2-alpine caddy validate --config /f --adapter caddyfile
+          docker run --rm -v "$PWD/docker/caddy/Caddyfile.proxied:/f:ro" \
+            -e APP_DOMAIN=example.test -e UPSTREAM_PROXIES=10.0.0.1/32 \
+            caddy:2-alpine caddy validate --config /f --adapter caddyfile
+
+      - name: The proxied edge trusts only the proxy in front
+        run: ./scripts/verify-edge-proxied.sh
 
   supply-chain:
     name: Supply chain

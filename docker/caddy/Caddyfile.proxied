@@ -1,0 +1,62 @@
+# The edge when another proxy terminates TLS in front of this instance and
+# forwards plain HTTP to it. Selected by setting UPSTREAM_PROXIES.
+{
+	admin off
+
+	# The proxy in front holds the certificates. Automatic HTTPS here would
+	# answer its every request with a redirect to https, which it would
+	# forward straight back: the loop a browser reports as too many redirects.
+	auto_https off
+
+	servers {
+		# The proxy in front is the only peer whose X-Forwarded-* headers are
+		# believed and passed on. From anyone else they are replaced with the
+		# connection's own address and scheme, so no client can choose the
+		# address the rate limiter and the geography see, or claim to have
+		# arrived over TLS. The application trusts the same addresses; compose
+		# appends UPSTREAM_PROXIES to its TRUSTED_PROXIES for that reason.
+		trusted_proxies static {$UPSTREAM_PROXIES}
+	}
+}
+
+(hardening) {
+	header {
+		# Forwarded by the proxy in front, so it still reaches the browser over
+		# the TLS connection it terminated.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		X-Frame-Options "DENY"
+		-Server
+		-X-Powered-By
+	}
+}
+
+# One plain-HTTP listener; the split is by Host, as in development. Every
+# hostname arrives here only because the proxy in front was told to forward it,
+# so short domains are registered there as well as in the application.
+:80 {
+	import hardening
+
+	@interface host {$APP_DOMAIN}
+	handle @interface {
+		# Bare paths are listed alongside their subtrees: a /horizon/* matcher
+		# alone does not match /horizon itself.
+		@api path /api/* /sanctum/* /horizon /horizon/* /storage /storage/* /up
+		handle @api {
+			reverse_proxy api:8000
+		}
+
+		handle {
+			reverse_proxy web:3000
+		}
+	}
+
+	# Any other Host is a short domain: every path belongs to the redirect
+	# path, exactly as the :443 block does when this edge owns TLS.
+	handle {
+		reverse_proxy api:8000
+	}
+}
