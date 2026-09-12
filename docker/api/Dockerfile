@@ -86,7 +86,12 @@ RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin shortynah \
     # no start-up step can forget it. Relative, so it survives the path changing.
     && ln -sfn ../storage/app/public public/storage \
     && mkdir -p storage/app/public \
-    && chown -R shortynah:shortynah storage/app
+    && chown -R shortynah:shortynah storage/app \
+    # Octane copies its FrankenPHP worker script into public/ the first time it
+    # starts and finds none. The file is git-ignored, so a clean checkout builds
+    # an image without it, and public/ belongs to root here on purpose — so the
+    # copy happens now, once, instead of failing at boot as the unprivileged user.
+    && cp vendor/laravel/octane/src/Commands/stubs/frankenphp-worker.php public/frankenphp-worker.php
 
 USER shortynah
 
