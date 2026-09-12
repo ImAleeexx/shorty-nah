@@ -24,6 +24,12 @@ final class DestinationDns implements DnsResolver
     {
         return $this->records[$host] ?? [];
     }
+
+    public function txtRecordsFor(string $name): array
+    {
+        // Destination checks resolve addresses only; nothing here reads TXT.
+        return [];
+    }
 }
 
 function destinationDns(): DestinationDns

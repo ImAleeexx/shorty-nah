@@ -10,15 +10,17 @@ use App\Domains\DomainVerifier;
 use App\Enums\Role;
 use App\Models\Domain;
 use App\Models\User;
-use App\Settings\SettingsStore;
 
 /**
  * DNS in a test suite is neither deterministic nor fast, so resolution is faked.
  */
 final class FakeDnsResolver implements DnsResolver
 {
-    /** @param array<string, list<string>> $records */
-    public function __construct(private array $records = []) {}
+    /**
+     * @param  array<string, list<string>>  $records
+     * @param  array<string, list<string>>  $txt
+     */
+    public function __construct(private array $records = [], private array $txt = []) {}
 
     /** @param list<string> $addresses */
     public function set(string $host, array $addresses): void
@@ -26,9 +28,20 @@ final class FakeDnsResolver implements DnsResolver
         $this->records[$host] = $addresses;
     }
 
+    /** @param list<string> $values */
+    public function setTxt(string $name, array $values): void
+    {
+        $this->txt[$name] = $values;
+    }
+
     public function addressesFor(string $host): array
     {
         return $this->records[$host] ?? [];
+    }
+
+    public function txtRecordsFor(string $name): array
+    {
+        return $this->txt[$name] ?? [];
     }
 }
 
@@ -53,9 +66,6 @@ function domains(): DomainService
 
 beforeEach(function (): void {
     dns();
-    // Routable addresses, not RFC 5737 documentation ranges — those are blocked
-    // by NetworkAddress because nothing is ever hosted on them.
-    app(SettingsStore::class)->set('domains.instance_addresses', '93.184.216.34,2606:2800:220::10');
     app(DomainRegistry::class)->flush();
 });
 
@@ -129,10 +139,22 @@ it('refuses to promote an unverified domain', function (): void {
 });
 
 // --- 6.2 verification ---
+//
+// Control is proven by DNS, with a TXT record rather than by where the host
+// resolves: a host fronted by a CDN resolves to the CDN's addresses and could
+// never match this instance's, and nothing is fetched from the operator's host,
+// which would be an SSRF surface pointed at an attacker-chosen name.
 
-it('verifies a domain resolving to the instance', function (): void {
+it('names the record an operator must publish', function (): void {
     $domain = Domain::factory()->unverified()->create(['host' => 'go.example.com']);
-    dns()->set('go.example.com', ['93.184.216.34']);
+
+    expect($domain->verificationRecordName())->toBe('_shortynah-verify.go.example.com')
+        ->and($domain->verificationRecordValue())->toBe('shortynah-verify='.$domain->verification_token);
+});
+
+it('verifies a domain whose DNS carries its verification record', function (): void {
+    $domain = Domain::factory()->unverified()->create(['host' => 'go.example.com']);
+    dns()->setTxt($domain->verificationRecordName(), [$domain->verificationRecordValue()]);
 
     $result = app(DomainVerifier::class)->verify($domain);
 
@@ -141,39 +163,57 @@ it('verifies a domain resolving to the instance', function (): void {
         ->and($domain->last_failure)->toBeNull();
 });
 
-it('refuses a domain resolving somewhere else', function (): void {
+it('finds the record among unrelated ones at the same name', function (): void {
     $domain = Domain::factory()->unverified()->create(['host' => 'go.example.com']);
-    dns()->set('go.example.com', ['8.8.8.8']);
+    dns()->setTxt($domain->verificationRecordName(), [
+        'v=spf1 -all',
+        '  '.$domain->verificationRecordValue().'  ',
+    ]);
+
+    expect(app(DomainVerifier::class)->verify($domain)->verified)->toBeTrue();
+});
+
+it('refuses a domain with no verification record', function (): void {
+    $domain = Domain::factory()->unverified()->create(['host' => 'go.example.com']);
 
     $result = app(DomainVerifier::class)->verify($domain);
 
     expect($result->verified)->toBeFalse()
-        ->and($result->failure)->toContain('does not resolve to this instance')
-        ->and($domain->refresh()->isVerified())->toBeFalse();
+        ->and($result->failure)->toContain('No verification record')
+        ->and($result->failure)->toContain('_shortynah-verify.go.example.com')
+        ->and($domain->refresh()->isVerified())->toBeFalse()
+        ->and($domain->last_checked_at)->not->toBeNull();
 });
 
-it('refuses a domain that does not resolve', function (): void {
+it('refuses a verification record carrying another token', function (): void {
     $domain = Domain::factory()->unverified()->create(['host' => 'go.example.com']);
+    dns()->setTxt($domain->verificationRecordName(), ['shortynah-verify=someoneelsestoken']);
 
-    expect(app(DomainVerifier::class)->verify($domain)->failure)->toContain('does not resolve');
+    $result = app(DomainVerifier::class)->verify($domain);
+
+    expect($result->verified)->toBeFalse()
+        ->and($result->failure)->toContain('does not carry this domain');
 });
 
-it('refuses a domain resolving inside the operator network', function (string $address): void {
+it('does not consult where the host resolves', function (): void {
+    // A CDN-fronted host resolves to the CDN. That must not matter.
     $domain = Domain::factory()->unverified()->create(['host' => 'go.example.com']);
-    dns()->set('go.example.com', [$address]);
+    dns()->set('go.example.com', ['10.0.0.5']);
+    dns()->setTxt($domain->verificationRecordName(), [$domain->verificationRecordValue()]);
 
-    // Even a matching private address is refused: a name that cannot be reached
-    // publicly should not receive a certificate.
-    expect(app(DomainVerifier::class)->verify($domain)->failure)->toContain('non-public address');
-})->with(['127.0.0.1', '10.0.0.5', '169.254.169.254', '172.17.0.2', '::1']);
+    expect(app(DomainVerifier::class)->verify($domain)->verified)->toBeTrue();
+});
 
-it('refuses verification when the instance address is unconfigured', function (): void {
-    app(SettingsStore::class)->forget('domains.instance_addresses');
-
+it('presents the record to an administrator', function (): void {
+    $admin = User::factory()->create(['role' => Role::Admin]);
     $domain = Domain::factory()->unverified()->create(['host' => 'go.example.com']);
-    dns()->set('go.example.com', ['93.184.216.34']);
 
-    expect(app(DomainVerifier::class)->verify($domain)->failure)->toContain('not configured');
+    $this->actingAs($admin)
+        ->getJson('/api/v1/domains')
+        ->assertOk()
+        ->assertJsonPath('domains.0.verification.type', 'TXT')
+        ->assertJsonPath('domains.0.verification.name', '_shortynah-verify.go.example.com')
+        ->assertJsonPath('domains.0.verification.value', 'shortynah-verify='.$domain->verification_token);
 });
 
 it('does not serve links from an unverified domain', function (): void {
@@ -188,7 +228,7 @@ it('does not serve links from an unverified domain', function (): void {
 
 it('serves links once verification succeeds', function (): void {
     $domain = Domain::factory()->unverified()->create(['host' => 'go.example.com']);
-    dns()->set('go.example.com', ['93.184.216.34']);
+    dns()->setTxt($domain->verificationRecordName(), [$domain->verificationRecordValue()]);
 
     expect(app(DomainRegistry::class)->serves('go.example.com'))->toBeFalse();
 

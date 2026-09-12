@@ -29,4 +29,30 @@ final class SystemDnsResolver implements DnsResolver
 
         return array_values(array_unique($addresses));
     }
+
+    /**
+     * @return list<string>
+     */
+    public function txtRecordsFor(string $name): array
+    {
+        $records = @dns_get_record($name, DNS_TXT);
+
+        if ($records === false) {
+            return [];
+        }
+
+        $values = [];
+
+        foreach ($records as $record) {
+            // A record longer than one character-string arrives split in
+            // 'entries'; 'txt' is the same record joined back together.
+            $value = $record['txt'] ?? null;
+
+            if (is_string($value) && $value !== '') {
+                $values[] = $value;
+            }
+        }
+
+        return array_values(array_unique($values));
+    }
 }

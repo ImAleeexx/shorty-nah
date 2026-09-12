@@ -136,10 +136,6 @@ final class SettingsRegistry
                 exposed: true,
             ),
 
-            // --- Domains. Operational: the addresses a registered domain must
-            // resolve to for verification to succeed. ---
-            new Setting('domains.instance_addresses', SettingType::String),
-
             // --- Redirect behaviour ---
             new Setting(
                 'redirect.default_mode',

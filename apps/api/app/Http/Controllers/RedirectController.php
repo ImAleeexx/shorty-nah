@@ -12,6 +12,7 @@ use App\Clicks\GeoResult;
 use App\Clicks\InterstitialPresenter;
 use App\Clicks\UserAgentParser;
 use App\Clicks\VisitorHash;
+use App\Domains\DomainRegistry;
 use App\Enums\RedirectMode;
 use App\Enums\RuleKind;
 use App\Links\ClickCounter;
@@ -58,12 +59,12 @@ final class RedirectController
 
     public const SCAN_VALUE = 'qr';
 
-    public function __invoke(Request $request, string $slug, RedirectResolver $resolver, ClickCounter $clicks): SymfonyResponse
+    public function __invoke(Request $request, string $slug, RedirectResolver $resolver, ClickCounter $clicks, DomainRegistry $domains): SymfonyResponse
     {
         $link = $resolver->resolve($request->getHost(), $slug);
 
         if ($link === null) {
-            return $this->unavailable();
+            return $this->nothingAt($request, $domains);
         }
 
         if ($link->disabled || $link->isExpired()) {
@@ -82,14 +83,27 @@ final class RedirectController
     }
 
     /**
+     * The bare host. A short domain has nothing at its root; a host this
+     * instance does not serve gets a page that says so.
+     */
+    public function root(Request $request, DomainRegistry $domains): SymfonyResponse
+    {
+        return $this->nothingAt($request, $domains);
+    }
+
+    /**
      * A submitted password. Success performs the link's configured redirect
      * directly, so no grant has to be stored anywhere.
      */
-    public function unlock(Request $request, string $slug, RedirectResolver $resolver, ClickCounter $clicks): SymfonyResponse
+    public function unlock(Request $request, string $slug, RedirectResolver $resolver, ClickCounter $clicks, DomainRegistry $domains): SymfonyResponse
     {
         $link = $resolver->resolve($request->getHost(), $slug);
 
-        if ($link === null || $link->disabled || $link->isExpired()) {
+        if ($link === null) {
+            return $this->nothingAt($request, $domains);
+        }
+
+        if ($link->disabled || $link->isExpired()) {
             return $this->unavailable();
         }
 
@@ -400,6 +414,26 @@ final class RedirectController
         ]);
 
         return $this->withNoStore(new Response($view->render(), $tooManyAttempts ? 429 : 401));
+    }
+
+    /**
+     * Nothing resolved for this host and path. On a domain this instance serves
+     * that is the one unavailable page; on any other host it is a page naming
+     * the real problem, because an operator setting up a new domain lands here
+     * and the unavailable page would send them looking for a missing link.
+     *
+     * Consulted only after the slug has missed, so the hit path is untouched;
+     * the registry is one cache read and no database query once warm.
+     */
+    private function nothingAt(Request $request, DomainRegistry $domains): Response
+    {
+        $host = $request->getHost();
+
+        if ($domains->serves($host)) {
+            return $this->unavailable();
+        }
+
+        return $this->withNoStore(new Response(view('redirect.unconfigured', ['host' => $host])->render(), 404));
     }
 
     private function unavailable(): Response

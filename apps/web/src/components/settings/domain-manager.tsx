@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { ArrowsClockwise, Check, Globe, Trash } from '@/components/icons';
+import { ArrowsClockwise, Check, Copy, Globe, Trash } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/field';
 import { FormError } from '@/components/ui/form-error';
@@ -60,7 +60,7 @@ export function DomainManager({ domains }: { domains: DomainRecord[] }) {
     setHost('');
     toast.success('Domain added', {
       id: 'domain-add',
-      description: 'Point it at this instance, then check it.',
+      description: 'Publish its TXT record, then check it.',
     });
     router.refresh();
   }
@@ -162,6 +162,20 @@ export function DomainManager({ domains }: { domains: DomainRecord[] }) {
                   </span>
                   {domain.last_failure !== null ? <span>{domain.last_failure}</span> : null}
                 </p>
+
+                {/* Verification is a record the operator has to publish, so it
+                    stays on screen until the domain verifies. Shown once at
+                    registration it would be lost by the time DNS is edited. */}
+                {domain.verified ? null : (
+                  <div
+                    className="mt-2 flex flex-col gap-1 text-xs"
+                    data-testid={`verification-record-${domain.host}`}
+                  >
+                    <p className="text-ink-muted">Publish this TXT record, then check.</p>
+                    <RecordLine label="Name" value={domain.verification.name} />
+                    <RecordLine label="Value" value={domain.verification.value} />
+                  </div>
+                )}
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
@@ -216,7 +230,7 @@ export function DomainManager({ domains }: { domains: DomainRecord[] }) {
         <div className="min-w-56 flex-1">
           <Field
             label="Add a domain"
-            hint="A short domain must resolve to this instance before it serves anything."
+            hint="A domain serves nothing until you prove control of it with a DNS TXT record; the record to publish appears here once it is added."
             error={failure?.errors.host?.[0]}
           >
             {({ id, describedBy }) => (
@@ -278,5 +292,25 @@ export function DomainManager({ domains }: { domains: DomainRecord[] }) {
         </div>
       </Sheet>
     </div>
+  );
+}
+
+function RecordLine({ label, value }: { label: string; value: string }) {
+  return (
+    <p className="flex min-w-0 items-center gap-2">
+      <span className="text-ink-muted w-10 shrink-0">{label}</span>
+      <code className="tabular text-ink min-w-0 truncate">{value}</code>
+      <Button
+        intent="ghost"
+        size="sm"
+        aria-label={`Copy ${label.toLowerCase()}`}
+        onClick={() => {
+          void navigator.clipboard.writeText(value);
+          toast.success('Copied', { id: `record-copied-${label}` });
+        }}
+      >
+        <Copy size={14} />
+      </Button>
+    </p>
   );
 }

@@ -78,6 +78,20 @@ final class Domain extends Model
         return $this->isVerified();
     }
 
+    /**
+     * The TXT record that proves control of the host. Under its own label, so it
+     * never competes with records the host already carries at its apex.
+     */
+    public function verificationRecordName(): string
+    {
+        return '_shortynah-verify.'.$this->host;
+    }
+
+    public function verificationRecordValue(): string
+    {
+        return 'shortynah-verify='.$this->verification_token;
+    }
+
     public static function normaliseHost(string $host): string
     {
         $host = mb_strtolower(trim($host));

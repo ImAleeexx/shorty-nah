@@ -126,8 +126,12 @@ test.describe('domains', () => {
     await expect(row).toBeVisible();
     await expect(row).toContainText('unverified');
 
-    // The host does not resolve to this instance, and the interface says so
-    // rather than reporting a check that did not happen as a success.
+    // The record to publish is on screen for as long as the domain waits.
+    await expect(row).toContainText(`_shortynah-verify.${HOST}`);
+    await expect(row).toContainText('shortynah-verify=');
+
+    // No such record exists in DNS, and the interface says so rather than
+    // reporting a check that did not happen as a success.
     await page.getByTestId(`verify-${HOST}`).click();
     await expect(page.getByText(/did not verify/i)).toBeVisible();
 

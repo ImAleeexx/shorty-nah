@@ -30,6 +30,13 @@ export type DomainRecord = {
   link_count: number;
   last_checked_at: string | null;
   last_failure: string | null;
+  // The DNS record that proves control. Public once published, so the API
+  // returns it for as long as the operator may still need to publish it.
+  verification: {
+    type: 'TXT';
+    name: string;
+    value: string;
+  };
 };
 
 /**

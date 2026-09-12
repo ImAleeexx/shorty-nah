@@ -79,6 +79,7 @@
         @media (prefers-reduced-motion: reduce) { button { transition: none; } }
         .notice { margin: 0 0 16px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.875rem; }
         .muted-link { color: var(--accent); }
+        code { font: 500 0.9375em ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); overflow-wrap: anywhere; }
     </style>
 </head>
 <body>

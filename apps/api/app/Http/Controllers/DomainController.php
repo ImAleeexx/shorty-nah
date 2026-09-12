@@ -146,6 +146,13 @@ final class DomainController
             'last_checked_at' => $domain->last_checked_at,
             'last_failure' => $domain->last_failure,
             'link_count' => $domains->linkCount($domain),
+            // Public by construction once published, so it is shown for as long
+            // as the operator may still need to publish it.
+            'verification' => [
+                'type' => 'TXT',
+                'name' => $domain->verificationRecordName(),
+                'value' => $domain->verificationRecordValue(),
+            ],
         ];
     }
 }
