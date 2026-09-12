@@ -10,9 +10,9 @@ API          := $(COMPOSE) exec api
 API_RUN      := $(COMPOSE) run --rm --no-deps api
 WEB          := $(COMPOSE) exec web
 
-.PHONY: help up down restart logs ps setup build sh tinker migrate fresh ch-migrate setup-token token-dir bootstrap-app-role \
+.PHONY: help up prod-up down restart logs ps setup build sh tinker migrate fresh ch-migrate setup-token token-dir bootstrap-app-role \
         test test-api test-web lint lint-api lint-web format analyse typecheck e2e ci install check-pins lint-syntax e2e-fixture \
-        queue-status backup restore e2e-setup e2e-setup-fixture check-secrets check-ports verify-schema verify-audit verify-shutdown verify-restore verify-clean-host scan scan-dependencies scan-secrets scan-images
+        queue-status backup restore e2e-setup e2e-setup-fixture check-secrets check-ports verify-schema verify-audit verify-postgres-guard verify-shutdown verify-restore verify-clean-host scan scan-dependencies scan-secrets scan-images
 
 help: ## List available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -22,6 +22,13 @@ help: ## List available targets
 
 up: token-dir ## Start the stack with the dev override applied
 	$(COMPOSE) up -d
+
+# Production is compose.yaml alone. Every other target layers the dev override,
+# which is the wrong stack to serve from: local ports, debug on, a recycled
+# worker per request. Built as well as started so a pull followed by this is a
+# deploy.
+prod-up: token-dir ## Build and start the production stack (no dev override)
+	$(COMPOSE_PROD) up -d --build
 
 # The setup token is written by the api container's own user, whose uid does not
 # match the host's, so the bind mount has to be writable by it. Sticky, not
@@ -170,6 +177,9 @@ verify-schema: ## Verify schema is applied before anything serves traffic
 verify-audit: ## Verify the audit log cannot be rewritten by the application
 	./scripts/verify-audit-immutability.sh
 
+verify-postgres-guard: ## Verify Postgres refuses a half-initialised volume
+	./scripts/verify-postgres-guard.sh
+
 ## --- Supply chain (slow; run before a release, and in CI) ---
 
 scan: scan-dependencies scan-secrets scan-images ## Run every supply-chain scan
@@ -194,7 +204,7 @@ verify-restore: ## Destroy this instance and prove the backup restores it
 verify-clean-host: ## Destroy everything and prove one command reaches the wizard
 	./scripts/verify-clean-host.sh
 
-ci: lint analyse typecheck test check-pins check-secrets check-ports verify-schema verify-audit ## Run the full quality gate
+ci: lint analyse typecheck test check-pins check-secrets check-ports verify-schema verify-audit verify-postgres-guard ## Run the full quality gate
 
 bench: ## Measure the redirect hot path against the recorded baseline
 	$(API) php artisan shortynah:bench-redirect --iterations=2000 --warmup=400 \

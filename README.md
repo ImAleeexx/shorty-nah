@@ -72,11 +72,18 @@ openssl rand -hex 24   # once for each password in .env
 Then bring it up:
 
 ```bash
-make setup
+make prod-up
 ```
 
-That builds the images, starts every service, applies both schemas, and prints
-your setup token. Open `https://your-domain/` and the wizard is waiting.
+That builds the images and starts every service. A one-shot applies both
+schemas before anything serves traffic, and the setup token is printed to the
+api log. Open `https://your-domain/` and the wizard is waiting.
+
+Let the first start finish. Interrupting it while Postgres is still
+initialising leaves a data directory the image treats as complete, and the
+stack refuses to start on it until the volume is removed — the message says
+how. `make setup` is the development equivalent: it applies the dev override
+and seeds fixture data, which is not what a server should run.
 
 ### The setup token
 

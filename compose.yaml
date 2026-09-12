@@ -208,8 +208,16 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
       DB_APP_USERNAME: ${DB_APP_USERNAME:?DB_APP_USERNAME is required}
       DB_APP_PASSWORD: ${DB_APP_PASSWORD:?DB_APP_PASSWORD is required}
+    # The image takes PG_VERSION as a finished cluster and skips the rest of its
+    # first boot, so a first `up` interrupted inside initdb comes back as a
+    # cluster that refuses every network connection and never says why. The
+    # guard refuses to start it and names the fix. Overriding the entrypoint
+    # drops the image's command, so it is restated.
+    entrypoint: ["/usr/local/bin/shortynah-postgres"]
+    command: ["postgres"]
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/entrypoint.sh:/usr/local/bin/shortynah-postgres:ro
       - ./docker/postgres/init-roles.sh:/docker-entrypoint-initdb.d/init-roles.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]

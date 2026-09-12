@@ -222,6 +222,9 @@ jobs:
       - name: Only the edge publishes a port
         run: ./scripts/check-published-ports.sh
 
+      - name: Postgres refuses a half-initialised volume
+        run: ./scripts/verify-postgres-guard.sh
+
       - name: Caddy configuration is valid
         run: |
           docker run --rm -v "$PWD/docker/caddy/Caddyfile:/f:ro" \
