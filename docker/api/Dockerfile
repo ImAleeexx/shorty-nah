@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------- Composer dependencies ----------
-FROM dunglas/frankenphp:1-php8.4@sha256:9a5a469b5b49252ca8fd2cc67d2c90df34ba35e40097fd675c5735a4850bed0e AS vendor
+FROM dunglas/frankenphp:1-php8.4@sha256:77bc2d40a58ace3a9425e4cbb0c40d044188dfd850e44a943ed043d743625df3 AS vendor
 
 # The vendor stage needs the extensions the lock file's platform requirements
 # name, or composer refuses the install. Horizon asks for pcntl and posix.
@@ -31,7 +31,7 @@ RUN composer dump-autoload \
         --no-scripts
 
 # ---------- Runtime ----------
-FROM dunglas/frankenphp:1-php8.4@sha256:9a5a469b5b49252ca8fd2cc67d2c90df34ba35e40097fd675c5735a4850bed0e AS runtime
+FROM dunglas/frankenphp:1-php8.4@sha256:77bc2d40a58ace3a9425e4cbb0c40d044188dfd850e44a943ed043d743625df3 AS runtime
 
 # pcntl is required by Octane, maxminddb makes in-process geo lookups cheap
 # enough to run inside the enrichment job.
