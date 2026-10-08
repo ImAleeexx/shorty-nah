@@ -387,7 +387,7 @@ jobs:
         if: failure()
         run: docker compose -f compose.yaml -f compose.dev.yaml logs --tail=120
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: playwright-report
